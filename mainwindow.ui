@@ -44,7 +44,7 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>nov01ad-</string>
+       <string/>
       </property>
       <property name="echoMode">
        <enum>QLineEdit::Password</enum>
@@ -67,7 +67,7 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>admin</string>
+       <string/>
       </property>
      </widget>
     </item>
@@ -90,7 +90,7 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>194.179.49.232</string>
+       <string/>
       </property>
      </widget>
     </item>
