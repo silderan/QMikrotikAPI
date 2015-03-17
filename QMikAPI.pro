@@ -16,11 +16,13 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     QSentences.cpp \
     QMD5.cpp \
-    APICom.cpp
+    APICom.cpp \
+    QIniFile.cpp
 
 HEADERS  += mainwindow.h \
     QSentences.h \
     QMD5.h \
-    APICom.h
+    APICom.h \
+    QIniFile.h
 
 FORMS    += mainwindow.ui

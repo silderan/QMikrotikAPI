@@ -1,11 +1,21 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+QConfigData gGlobalConfig;
+
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent), ui(new Ui::MainWindow),
 	mktAPI(this)
 {
     ui->setupUi(this);
+
+	// Rellenamos el diálogo con la configuración.
+	gGlobalConfig.load();
+	ui->leIP->setText(gGlobalConfig.getHost());
+	ui->sbPort->setValue(gGlobalConfig.getPort());
+	ui->leUser->setText(gGlobalConfig.getUserName());
+	ui->lePass->setText(gGlobalConfig.getUserPass());
+
 	connect( &mktAPI, SIGNAL(comConnected(bool)), SLOT(onConnected(bool)) );
 	connect( &mktAPI, SIGNAL(addrFound()), this, SLOT(onURLResolved()) );
 	connect( &mktAPI, SIGNAL(comError(QString)), this, SLOT(onCommError(QString)) );
@@ -17,6 +27,12 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
 	disconnect( &mktAPI );
+	// Guardamos los datos del diálogo.
+	gGlobalConfig.setHost(ui->leIP->text());
+	gGlobalConfig.setPort(ui->sbPort->value());
+	gGlobalConfig.setUserName(ui->leUser->text());
+	gGlobalConfig.setUserPass(ui->lePass->text());
+	gGlobalConfig.save();
     delete ui;
 }
 
