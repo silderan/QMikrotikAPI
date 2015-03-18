@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
     md5_byte_t out[16];
     char hola[5] = "hola";
     QMD5::init(&state);
-    QMD5::append(&state, (md5_byte_t*)hola, 4);
-    QMD5::finish(&state, out);
+	QMD5::append(&state, (md5_byte_t*)hola, 4);
+	QMD5::finish(&state, out);
 
     QCryptographicHash h(QCryptographicHash::Md5);
     h.addData(hola,4);

@@ -18,7 +18,6 @@ class APICom : public QObject
     quint16 m_port;
     QString m_Username;
     QString m_Password;
-	int incomingWordSize;
 	QByteArray incomingWord;
 	QSentence incomingSentence;
 	enum LoginState
@@ -28,6 +27,7 @@ class APICom : public QObject
 		UserPassSended,
 		LogedIn
 	} m_loginState;
+	int incomingWordSize;
 
 	void doLogin();
 	void tryLogin();

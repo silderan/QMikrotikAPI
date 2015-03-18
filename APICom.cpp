@@ -33,14 +33,20 @@ void APICom::writeSentence(QSentence &writeSentence)
  * Read a word from the socket
  * The word that was read is returned as a string
  ********************************************************************/
-// TODO: Esta función no tiene en cuenta que el socket no tenga
-// todos los datos disponibles según el tamaño que deba leer.
-// Quizá no importe pero esto debería tenerse en cuenta.
 int APICom::readWord()
 {
 	if( incomingWordSize <= 0 )
-		if( (incomingWordSize = readLength()) == 0 )
+		switch( incomingWordSize = readLength() )
 		{
+		// Negative values means comm interrupted when reading length.
+		case -1:// Nothing readed. No problem. Will be readed later.
+			return -1;
+		case -2:// Cannot read 2nd byte (TODO: Handle it)
+		case -3:// Cannot read 3rd byte (TODO: Handle it)
+		case -4:// Cannot read 4th byte (TODO: Handle it)
+			throw "cannot read word length.";
+			break;
+		case 0:
 			incomingWord.clear();
 			return 0;
 		}
@@ -131,27 +137,16 @@ bool Mkt::APICom::connectTo(const QString &addr, quint16 port)
 }
 
 // TODO: Poner esto en una cabecera y con un nombre más clarificador. (indica "fin de comando" )
-static char *cNULL = {0};
+const char *cNULL = "";
 
 void APICom::doLogin()
 {
 	switch( m_loginState )
 	{
 	case NoLoged:
-		emit loginRequest(&m_Username, &m_Password);
-
-		//Send login message
-		writeWord("/login");
-		writeWord(cNULL);
-		m_loginState = LoginRequested;
-		incomingSentence.clear();
 		break;
 	case LoginRequested:
 	{
-		readSentence();
-		// Aun no ha llegado todo.
-		if( incomingSentence.getReturnType() == QSentence::Partial )
-			return;
 		if( incomingSentence.getReturnType() != QSentence::Done )
 		{
 			emit comError(tr("Cannot login"));
@@ -215,25 +210,28 @@ void APICom::doLogin()
 
 		writeSentence(writenSentence);
 		incomingSentence.clear();
+		incomingWordSize = -1;
 		m_loginState = UserPassSended;
 		break;
 	}
 	case UserPassSended:
-		readSentence();
-		if( incomingSentence.getReturnType() == QSentence::Partial )
-			return;
 		if( incomingSentence.getReturnType() == QSentence::Done )
 		{
 			m_loginState = LogedIn;
+			incomingWordSize = -1;
 			incomingSentence.clear();
 			emit routerListening();
 		}
 		else
 		{
 			m_loginState = NoLoged;
+			incomingWordSize = -1;
 			incomingSentence.clear();
 			m_sock.close();
 			emit comError(tr("Invalid Username or Password"));
+			QSentenceMap map;
+			incomingSentence.getMap(map);
+			emit comError(tr("remote msg: %1").arg(map["message"]));
 		}
 		break;
 	case LogedIn:
@@ -326,7 +324,8 @@ int APICom::readLength()
 
 	lengthData = (char *) calloc(sizeof(int), 1);
 
-	m_sock.read( &firstChar, 1 );
+	if( !m_sock.read( &firstChar, 1 ) )
+		return -1;
 
 	// read 4 bytes
 	// this code SHOULD work, but is untested...
@@ -335,15 +334,15 @@ int APICom::readLength()
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		lengthData[3] = firstChar;
 		lengthData[3] &= 0x1f;        // mask out the 1st 3 bits
-		m_sock.read( &lengthData[2], 1 );
-		m_sock.read( &lengthData[1], 1 );
-		m_sock.read( &lengthData[0], 1 );
+		if( !m_sock.read( &lengthData[2], 1 ) ) return -2;
+		if( !m_sock.read( &lengthData[1], 1 ) ) return -3;
+		if( !m_sock.read( &lengthData[0], 1 ) ) return -4;
 #else
 		lengthData[0] = firstChar;
 		lengthData[0] &= 0x1f;        // mask out the 1st 3 bits
-		m_sock.read( &lengthData[1], 1 );
-		m_sock.read( &lengthData[2], 1 );
-		m_sock.read( &lengthData[3], 1 );
+		if( !m_sock.read( &lengthData[1], 1 ) ) return -2;
+		if( !m_sock.read( &lengthData[2], 1 ) ) return -3;
+		if( !m_sock.read( &lengthData[3], 1 ) ) return -4;
 #endif
 		messageLength = (int *)lengthData;
 	}
@@ -353,13 +352,13 @@ int APICom::readLength()
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		lengthData[2] = firstChar;
 		lengthData[2] &= 0x3f;        // mask out the 1st 2 bits
-		m_sock.read( &lengthData[1], 1 );
-		m_sock.read( &lengthData[0], 1 );
+		if( !m_sock.read( &lengthData[1], 1 ) ) return -2;
+		if( !m_sock.read( &lengthData[0], 1 ) ) return -3;
 #else
 		lengthData[1] = firstChar;
 		lengthData[1] &= 0x3f;        // mask out the 1st 2 bits
-		m_sock.read( &lengthData[2], 1 );
-		m_sock.read( &lengthData[3], 1 );
+		if( !m_sock.read( &lengthData[2], 1 ) ) return -2;
+		if( !m_sock.read( &lengthData[3], 1 ) ) return -3;
 #endif
 		messageLength = (int *)lengthData;
 	}
@@ -369,11 +368,11 @@ int APICom::readLength()
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		lengthData[1] = firstChar;
 		lengthData[1] &= 0x7f;        // mask out the 1st bit
-		m_sock.read( &lengthData[0], 1 );
+		if( !m_sock.read( &lengthData[0], 1 ) ) return -2;
 #else
 		lengthData[2] = firstChar;
 		lengthData[2] &= 0x7f;        // mask out the 1st bit
-		m_sock.read( &lengthData[3], 1 );
+		if( !m_sock.read( &lengthData[3], 1 ) ) return -2;
 #endif
 		messageLength = (int *)lengthData;
 	}
@@ -406,8 +405,15 @@ void Mkt::APICom::onError(QAbstractSocket::SocketError /*err*/)
 void APICom::onConnected()
 {
     emit comConnected(true);
+
 	m_loginState = NoLoged;
-	doLogin();
+	emit loginRequest(&m_Username, &m_Password);
+
+	m_loginState = LoginRequested;
+	incomingSentence.clear();
+	//Send login message
+	writeWord("/login");
+	writeWord(cNULL);
 }
 
 void APICom::onDisconnected()
@@ -422,10 +428,12 @@ void APICom::onHostLookup()
 
 void APICom::onReadyRead()
 {
-	// TODO: Aquí debo comprobar que esté todo el mensaje desde el router antes de
-	// notificar que se puede leer del socket.
-	if( m_loginState != LogedIn )
-		doLogin();
-	else
-		emit comReceive();
+	readSentence();
+	if( incomingSentence.getReturnType() != QSentence::Partial )
+	{
+		if( m_loginState != LogedIn )
+			doLogin();
+		else
+			emit comReceive();
+	}
 }
