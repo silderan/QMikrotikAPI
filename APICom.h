@@ -36,19 +36,22 @@ class APICom : public QObject
 protected:
     void writeLength(int messageLength);
     int readLength();
-    void writeWord(const QString &strWord);
+	void writeWord(const QString &strWord);
 	int readWord();
+	void readSentence();
 
 public:
     APICom(QObject *papi = NULL);
     ~APICom();
 
-	bool connectTo(const QString &addr, quint16 port);
-    void writeSentence(Mkt::QSentence &writeSentence);
-	void readSentence();
+//	void writeSentence(const Mkt::QSentence &writeSentence);
+	void writeSentence(const QString &sentence);
 
-    void readBlock(Mkt::QBlock &block);
 	bool isConnected() const { return m_sock.state() == QAbstractSocket::ConnectedState;	}
+
+public slots:
+	bool connectTo(const QString &addr, quint16 port);
+	void closeCom() { if(isConnected()) m_sock.close(); }
 
 private slots:
 	void onError(QAbstractSocket::SocketError);
@@ -62,7 +65,7 @@ signals:
 	void comError(const QString &error);
     void addrFound();
     void loginRequest(QString *user, QString *pass);
-	void comReceive();
+	void comReceive(Mkt::QSentence &s);
 	void routerListening();
 };
 }

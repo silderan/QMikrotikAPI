@@ -2,44 +2,98 @@
 
 using namespace Mkt;
 
-void QSentence::Tokenize(QString &str, QStringList &tokens, const QString &delimiters)
+QString QSentence::toString() const
 {
-    tokens.append( str.split(delimiters) );
+	QString rtn(m_cmd);
+	if( m_Attributes.count() )
+	{
+		QMap<QString, QString>::const_iterator i;
+		for( i = m_Attributes.constBegin(); i != m_Attributes.constEnd(); ++i )
+			rtn.append(QString("=%1=%2").arg(i.key()).arg(i.value()));
+	}
+	if( m_APIAttributes.count() )
+	{
+		QMap<QString, QString>::const_iterator i;
+		for( i = m_APIAttributes.constBegin(); i != m_APIAttributes.constEnd(); ++i )
+			rtn.append(QString("=%1=%2").arg(i.key()).arg(i.value()));
+	}
+	if( m_Queries.count() )
+	{
+		QMap<QString, QString>::const_iterator i;
+		for( i = m_Queries.constBegin(); i != m_Queries.constEnd(); ++i )
+			rtn.append(QString("?%1=%2").arg(i.key()).arg(i.value()));
+	}
+	if( m_tag.count() )
+		rtn.append(QString(".tag=%1").arg(m_tag));
+	return rtn;
 }
 
-void QSentence::getMap(QSentenceMap &sentenceMap)
+void QSentence::addQuery(QSentence::QueryType t, const QString &name, const QString &value)
 {
-	for( int i = 0; i < count(); ++i )
+	switch(t)
 	{
-		QStringList lista = at(i).split("=");
-		// Aquí se ignora el primer elemento que siempre está vacío
-		// Una respuesta del servidor es algo como "!done=ret=asfasfd"
-		// así que la función "split" siempre genera un primer elemento vacío.
-		for( int l = 1; l < lista.count(); l+=2 )
-			sentenceMap.insert(lista[l], lista[l+1]);
+	case HasProp:
+		break;
+	case DontHasProp:
+		m_Queries[QString("-%1").arg(name)] = "";
+		break;
+	case EqualProp:
+		m_Queries[QString("=%1").arg(name)] = value;
+		break;
+	case GreaterThanProp:
+		m_Queries[QString(">%1").arg(name)] = value;
+		break;
+	case LessThanProp:
+		m_Queries[QString("<%1").arg(name)] = value;
+		break;
+	case Operation:
+		m_Queries[QString("#%1").arg(name)] = value;
+		break;
+	default:
+		m_Queries[name] = value;
 	}
 }
 
-void QSentence::print() const
+void QSentence::addWord(const QString &word)
 {
-#ifdef QT_DEBUG
-    printf("Sentence Word Count = %d\n", count());
-    printf("Sentence returnType = %d\n", returnType);
-#endif
-
-    for( int i = 0; i < count(); ++i )
-        printf("%s\n", at(i).toLatin1().data());
-
-    printf("\n");
-}
-
-
-void QBlock::print() const
-{
-#ifdef QT_DEBUG
-    printf("PrintBlock\n");
-    printf("Block Size = %d\n", count());
-#endif
-    for( int i = 0; i < count(); ++i )
-        at(i).print();
+	if( word.count() )
+	{
+		int p;
+		switch(word[0].toLatin1())
+		{
+		case '=':
+			p = word.indexOf('=', 1);
+			addAttribute(word.mid(1, p-1), word.right(word.count()-p-1));
+			break;
+		case '.':
+			p = word.indexOf('=', 1);
+			if( word.startsWith(".tag") )
+				setTag(word.right(word.count()-p-1));
+			else
+				addAPIAttribute(word.mid(1, p-1), word.right(word.count()-p-1));
+			break;
+		case '!':
+			if( word == "!done" )
+				setReturnType(Done);
+			else
+			if( word == "!trap" )
+				setReturnType(Trap);
+			else
+			if( word == "!fatal" )
+				setReturnType(Fatal);
+			else
+			if( word == "!re" )
+				setReturnType(Reply);
+			else
+				throw "Unknown response type";
+			break;
+		case '/':
+			setCommand(word);
+			break;
+		case '?':
+			p = word.indexOf('=', 1);
+			addQuery(word.mid(1, p-1), word.right(word.count()-p-1));
+			break;
+		}
+	}
 }

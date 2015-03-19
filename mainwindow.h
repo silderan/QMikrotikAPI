@@ -67,7 +67,7 @@ private slots:
 	void onLoginRequest(QString *user, QString *pass);
 	void onURLResolved();
 	void onCommError(const QString &error);
-	void onReceive();
+	void onReceive(Mkt::QSentence &s);
 	void onRouterListening();
 };
 

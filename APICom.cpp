@@ -19,14 +19,16 @@ APICom::~APICom()
 	m_sock.close();
 }
 
-void APICom::writeSentence(QSentence &writeSentence)
+void APICom::writeWord(const QString &word)
 {
-	if( writeSentence.count() )
-	{
-		for( int i = 0; i < writeSentence.count(); i++ )
-			writeWord(writeSentence[i]);
-		writeWord("\0");
-	}
+	writeLength( word.count() );
+	m_sock.write( word.toLatin1() );
+}
+
+void APICom::writeSentence(const QString &sentence)
+{
+	writeWord(sentence);
+	writeWord("");
 }
 
 /********************************************************************
@@ -72,7 +74,7 @@ void APICom::readSentence()
 		switch( i )
 		{
 		case 1:
-			incomingSentence.append(incomingWord);
+			incomingSentence.addWord(incomingWord);
 			incomingWord.clear();
 			incomingWordSize = -1;
 			break;
@@ -105,23 +107,14 @@ void APICom::readSentence()
 			incomingSentence.setReturnType(QSentence::Fatal);
 		}
 		else
+		if( incomingSentence.first().startsWith("!re") )
+		{
+			incomingSentence.removeFirst();
+			incomingSentence.setReturnType(QSentence::Reply);
+		}
+		else
 			incomingSentence.setReturnType(QSentence::None);
 	}
-}
-
-void APICom::readBlock(QBlock &block)
-{
-	QSentence sentence;
-	block.clear();
-
-	do
-	{
-		readSentence();
-
-		if( incomingSentence.getReturnType() != QSentence::Partial )
-			block.append(incomingSentence);
-	}
-	while( sentence.getReturnType() == QSentence::None );
 }
 
 bool Mkt::APICom::connectTo(const QString &addr, quint16 port)
@@ -135,9 +128,6 @@ bool Mkt::APICom::connectTo(const QString &addr, quint16 port)
     m_sock.connectToHost(m_addr = addr, m_port = port);
     return true;
 }
-
-// TODO: Poner esto en una cabecera y con un nombre más clarificador. (indica "fin de comando" )
-const char *cNULL = "";
 
 void APICom::doLogin()
 {
@@ -154,9 +144,7 @@ void APICom::doLogin()
 			m_sock.close();
 			break;
 		}
-		QSentenceMap sentMap;
-		incomingSentence.getMap(sentMap);
-		if( sentMap.count() != 1 )
+		if( incomingSentence.attributesCount() != 1 )
 		{
 			emit comError(tr("Unknown remote login sentence format: didn't receive anything"));
 			m_loginState = NoLoged;
@@ -164,7 +152,7 @@ void APICom::doLogin()
 			m_sock.close();
 			break;
 		}
-		if( !sentMap.contains("ret") )
+		if( !incomingSentence.attribute("ret").count() )
 		{
 			emit comError(tr("Unknown remote login sentence format: Doesn't receive 'ret' namefield"));
 			m_loginState = NoLoged;
@@ -172,7 +160,7 @@ void APICom::doLogin()
 			m_sock.close();
 			break;
 		}
-		if( sentMap["ret"].count() != 32 )
+		if( incomingSentence.attribute("ret").count() != 32 )
 		{
 			emit comError(tr("Unknown remote login sentence format: 'ret' field doesn't contains 32 characters"));
 			m_loginState = NoLoged;
@@ -180,7 +168,6 @@ void APICom::doLogin()
 			m_sock.close();
 			break;
 		}
-		QSentence writenSentence;
 
 		md5_state_t state;
 		md5_byte_t digest[16];
@@ -188,11 +175,11 @@ void APICom::doLogin()
 		////Place of interest: Check to see if this md5Challenge string works as as string.
 		//   It may not because it needs to be binary.
 		// convert szMD5Challenge to binary
-		QString md5ChallengeBinary = QMD5::ToBinary(sentMap["ret"]);
+		QString md5ChallengeBinary = QMD5::ToBinary(incomingSentence.attribute("ret"));
 
 		// get md5 of the password + challenge concatenation
 		QMD5::init(&state);
-		QMD5::append(&state, (const md5_byte_t *)cNULL, 1);
+		QMD5::append(&state, (const md5_byte_t *)"", 1);
 		QMD5::append(&state, (const md5_byte_t *)m_Password.toLatin1().data(),
 								 strlen(m_Password.toLatin1().data()));
 		QMD5::append(&state, (const md5_byte_t *)md5ChallengeBinary.toLatin1().data(), 16);
@@ -204,11 +191,11 @@ void APICom::doLogin()
 		QString md5PasswordToSend = QMD5::DigestToHexString(digest);
 
 		// put together the login sentence
-		writenSentence.append("/login");
-		writenSentence.append("=name=" + m_Username);
-		writenSentence.append("=response=00" + md5PasswordToSend);
+		writeWord("/login");
+		writeWord(QString("=name=%1").arg(m_Username));
+		writeWord(QString("=response=00%1").arg(md5PasswordToSend));
+		writeWord("");
 
-		writeSentence(writenSentence);
 		incomingSentence.clear();
 		incomingWordSize = -1;
 		m_loginState = UserPassSended;
@@ -225,13 +212,11 @@ void APICom::doLogin()
 		else
 		{
 			m_loginState = NoLoged;
+			emit comError(tr("Invalid Username or Password"));
+			emit comError(tr("remote msg: %1").arg(incomingSentence.attribute("message")));
 			incomingWordSize = -1;
 			incomingSentence.clear();
 			m_sock.close();
-			emit comError(tr("Invalid Username or Password"));
-			QSentenceMap map;
-			incomingSentence.getMap(map);
-			emit comError(tr("remote msg: %1").arg(map["message"]));
 		}
 		break;
 	case LogedIn:
@@ -389,12 +374,6 @@ int APICom::readLength()
 	return retMessageLength;
 }
 
-void APICom::writeWord(const QString &strWord)
-{
-	writeLength( strWord.count() );
-	m_sock.write( strWord.toLatin1() );
-}
-
 void Mkt::APICom::onError(QAbstractSocket::SocketError /*err*/)
 {
     if( m_sock.state() != QAbstractSocket::ConnectedState )
@@ -412,8 +391,7 @@ void APICom::onConnected()
 	m_loginState = LoginRequested;
 	incomingSentence.clear();
 	//Send login message
-	writeWord("/login");
-	writeWord(cNULL);
+	writeSentence("/login");
 }
 
 void APICom::onDisconnected()
@@ -434,6 +412,9 @@ void APICom::onReadyRead()
 		if( m_loginState != LogedIn )
 			doLogin();
 		else
-			emit comReceive();
+		{
+			emit comReceive(incomingSentence);
+			incomingSentence.clear();
+		}
 	}
 }

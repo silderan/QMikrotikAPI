@@ -21,12 +21,12 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect( &mktAPI, SIGNAL(comError(QString)), this, SLOT(onCommError(QString)) );
 	connect( &mktAPI, SIGNAL(loginRequest(QString*,QString*)), this, SLOT(onLoginRequest(QString*,QString*)) );
 	connect( &mktAPI, SIGNAL(routerListening()), this, SLOT(onRouterListening()) );
-	connect( &mktAPI, SIGNAL(comReceive()), this, SLOT(onReceive()) );
+	connect( &mktAPI, SIGNAL(comReceive(Mkt::QSentence&)), this, SLOT(onReceive(Mkt::QSentence&)) );
 }
 
 MainWindow::~MainWindow()
 {
-	disconnect( &mktAPI );
+	mktAPI.closeCom();
 	// Guardamos los datos del diálogo.
 	gGlobalConfig.setHost(ui->leIP->text());
 	gGlobalConfig.setPort(ui->sbPort->value());
@@ -66,18 +66,12 @@ void MainWindow::onCommError(const QString &error)
 	ui->lwResponses->addItem("Comm Error: "+error);
 }
 
-void MainWindow::onReceive()
+void MainWindow::onReceive(Mkt::QSentence &s)
 {
-	Mkt::QBlock block;
-	// receive and print block from the API
-	mktAPI.readBlock(block);
+	ui->lwResponses->addItem(s.toString());
 }
 
 void MainWindow::onRouterListening()
 {
-	Mkt::QSentence sentence;
-
-	// Fill and send sentence to the API
-	sentence.append("/interface/getall");
-	mktAPI.writeSentence(sentence);
+	mktAPI.writeSentence("/interface/getall");
 }
