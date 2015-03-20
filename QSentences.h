@@ -7,7 +7,60 @@
 namespace Mkt
 {
 
-typedef QMap<QString, QString>  QSentenceMap;
+class QBasicAttrib : public QMap<QString, QString>
+{
+	char firstCh;
+public:
+	QBasicAttrib(char c) : firstCh(c)
+	{ }
+	inline void addAttribute(const QString &name, const QString &value)  { (*this)[name] = value; }
+	inline QString attribute(const QString &name) const { return (*this)[name]; }
+	QStringList toWords() const;
+	QString toWord(const QString &name)const;
+	void addWord(const QString &attribStr);
+	void addWord(const QString &name, const QString &value);
+};
+
+struct QQuery
+{
+	enum Type
+	{
+		HasProp,
+		DontHasProp,
+		EqualProp,
+		GreaterThanProp,
+		LessThanProp,
+		Operation
+	};
+	Type type;
+	QString name;
+	QString value;
+	QQuery()
+		: type(HasProp)
+	{ }
+	QQuery(const QString &propName)
+		: type(HasProp), name(propName)
+	{ }
+	QQuery(const QString &propName, const QString &propVal, Type t = EqualProp)
+		: type(t), name(propName), value(propVal)
+	{ }
+	bool operator==(const QQuery &q)
+	{
+		return (type == q.type) && (name == q.name) && (value == q.value);
+	}
+	bool operator!=(const QQuery &q) { return !(this->operator ==(q)); }
+	QString toWord()const;
+	QQuery &fromWord(const QString &queryString);
+};
+
+class QQueries : public QList<QQuery>
+{
+public:
+	void addQuery(const QQuery &query);
+	void addQuery(const QString &name);
+	void addQuery(const QString &name, const QString &value, QQuery::Type t = QQuery::EqualProp);
+	QStringList toWords() const;
+};
 
 class QSentence : public QStringList
 {
@@ -19,32 +72,23 @@ public:
         Trap = 2,
 		Fatal = 3,
 		Reply = 4,
-		Partial = 5	// Aún están llegando datos.
-    };
-	enum QueryType
-	{
-		HasProp,
-		DontHasProp,
-		EqualProp,
-		GreaterThanProp,
-		LessThanProp,
-		Operation
+		Partial = 5	// Still receiving data from ROS.
 	};
-	QString m_cmd;
-	QString m_tag;
-	QMap<QString, QString> m_Attributes;
-	QMap<QString, QString> m_APIAttributes;
-	QMap<QString, QString> m_Queries;
 
 private:
-    ReturnType returnType;     // return type of sentence
+	ReturnType returnType;		// Sentence return type.
+	QString m_cmd;				// Sentence command.
+	QString m_tag;				// Sentence tag (if any)
+	QBasicAttrib m_Attributes;	// Attributes mapping.
+	QBasicAttrib m_APIAttributes;//API Attributes mapping.
+	QQueries m_Queries;			// Queries list.
 
 public:
+	QSentence() : m_Attributes('='), m_APIAttributes('.')
+	{ }
 	inline void setReturnType(ReturnType r) { returnType = r; }
     inline ReturnType getReturnType() const { return returnType; }
 	QString toString() const;
-
-    void getMap(QSentenceMap &sentenceMap);
 
 	void clear()
 	{
@@ -59,27 +103,18 @@ public:
 	inline void setCommand(const QString &cmd) { m_cmd = cmd; }
 	inline const QString &command() const { return m_cmd; }
 
-	inline void addAttribute(const QString &name, const QString &value)
-	{ m_Attributes[name] = value; }
-	inline QString attribute(const QString &name) const { return m_Attributes[name]; }
-	inline QStringList attributes() const { return m_Attributes.values(); }
-	inline int attributesCount() const { return m_Attributes.count(); }
+	inline const QBasicAttrib &attributes() const { return m_Attributes; }
+	inline QBasicAttrib &attributes() { return m_Attributes; }
 
-	inline void addAPIAttribute(const QString &name, const QString &value)
-	{ m_APIAttributes[name] = value; }
-	inline QString APIattribute(const QString &name) const { return m_APIAttributes[name]; }
-	inline QStringList APIAttributes() const { return m_APIAttributes.values(); }
-	inline int APIattributesCount() const { return m_APIAttributes.count(); }
+	inline const QBasicAttrib &APIattributes() const { return m_APIAttributes; }
+	inline QBasicAttrib &APIattributes() { return m_APIAttributes; }
 
 	inline void setTag(const QString &tagname) { m_tag = tagname; }
-	inline QString tag() const { return m_tag; }
+	inline const QString &tag() const { return m_tag; }
 
-	inline void addQuery(const QString &name, const QString &value) { m_Queries[name] = value; }
-	inline QString query(const QString &name) const { return m_Queries[name]; }
-	inline QStringList queries() const { return m_Queries.values(); }
-	inline int queriesCount() const { return m_Queries.count(); }
+	inline QQueries &queries() { return m_Queries; }
+	inline const QQueries &queries() const { return m_Queries; }
 
-	void addQuery(QueryType t, const QString &name, const QString &value);
 	void addWord(const QString &word);
 };
 }

@@ -144,7 +144,7 @@ void APICom::doLogin()
 			m_sock.close();
 			break;
 		}
-		if( incomingSentence.attributesCount() != 1 )
+		if( incomingSentence.attributes().count() != 1 )
 		{
 			emit comError(tr("Unknown remote login sentence format: didn't receive anything"));
 			m_loginState = NoLoged;
@@ -152,7 +152,7 @@ void APICom::doLogin()
 			m_sock.close();
 			break;
 		}
-		if( !incomingSentence.attribute("ret").count() )
+		if( !incomingSentence.attributes().attribute("ret").count() )
 		{
 			emit comError(tr("Unknown remote login sentence format: Doesn't receive 'ret' namefield"));
 			m_loginState = NoLoged;
@@ -160,7 +160,7 @@ void APICom::doLogin()
 			m_sock.close();
 			break;
 		}
-		if( incomingSentence.attribute("ret").count() != 32 )
+		if( incomingSentence.attributes().attribute("ret").count() != 32 )
 		{
 			emit comError(tr("Unknown remote login sentence format: 'ret' field doesn't contains 32 characters"));
 			m_loginState = NoLoged;
@@ -175,7 +175,7 @@ void APICom::doLogin()
 		////Place of interest: Check to see if this md5Challenge string works as as string.
 		//   It may not because it needs to be binary.
 		// convert szMD5Challenge to binary
-		QString md5ChallengeBinary = QMD5::ToBinary(incomingSentence.attribute("ret"));
+		QString md5ChallengeBinary = QMD5::ToBinary(incomingSentence.attributes().attribute("ret"));
 
 		// get md5 of the password + challenge concatenation
 		QMD5::init(&state);
@@ -213,7 +213,7 @@ void APICom::doLogin()
 		{
 			m_loginState = NoLoged;
 			emit comError(tr("Invalid Username or Password"));
-			emit comError(tr("remote msg: %1").arg(incomingSentence.attribute("message")));
+			emit comError(tr("remote msg: %1").arg(incomingSentence.attributes().attribute("message")));
 			incomingWordSize = -1;
 			incomingSentence.clear();
 			m_sock.close();

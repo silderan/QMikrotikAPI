@@ -2,75 +2,162 @@
 
 using namespace Mkt;
 
-QString QSentence::toString() const
+bool splitWord(const QString &word, QString &name, QString &value, int from)
 {
-	QString rtn(m_cmd);
-	if( m_Attributes.count() )
+	int p = word.indexOf('=', from);
+	if( p != -1 )
 	{
-		QMap<QString, QString>::const_iterator i;
-		for( i = m_Attributes.constBegin(); i != m_Attributes.constEnd(); ++i )
-			rtn.append(QString("=%1=%2").arg(i.key()).arg(i.value()));
+		name = word.mid(from, p-1);
+		value = word.right(word.count()-p-1);
+		return true;
 	}
-	if( m_APIAttributes.count() )
+	else
 	{
-		QMap<QString, QString>::const_iterator i;
-		for( i = m_APIAttributes.constBegin(); i != m_APIAttributes.constEnd(); ++i )
-			rtn.append(QString("=%1=%2").arg(i.key()).arg(i.value()));
+		name = word.right(from);
+		return false;
 	}
-	if( m_Queries.count() )
-	{
-		QMap<QString, QString>::const_iterator i;
-		for( i = m_Queries.constBegin(); i != m_Queries.constEnd(); ++i )
-			rtn.append(QString("?%1=%2").arg(i.key()).arg(i.value()));
-	}
-	if( m_tag.count() )
-		rtn.append(QString(".tag=%1").arg(m_tag));
+}
+
+QStringList QBasicAttrib::toWords() const
+{
+	QStringList rtn;
+
+	foreach( QString key, keys() )
+		rtn.append(toWord(key));
+
 	return rtn;
 }
 
-void QSentence::addQuery(QSentence::QueryType t, const QString &name, const QString &value)
+QString QBasicAttrib::toWord(const QString &name) const
 {
-	switch(t)
+	QString val = value(name);
+	if( !val.isEmpty() )
+		return QString("%1%2=%3").arg(firstCh).arg(name,val);
+	return QString();
+}
+
+void QBasicAttrib::addWord(const QString &name, const QString &value)
+{
+	insert(name, value);
+}
+
+void QBasicAttrib::addWord(const QString &attribStr)
+{
+	if( attribStr.count() < 3 )
+		return;
+
+	int from = attribStr[0].toLatin1() == firstCh ? 1 : 0;
+	QString name;
+	QString value;
+	splitWord(attribStr, name, value, from);
+	addWord(name, value);
+}
+
+QString QQuery::toWord() const
+{
+	switch( type )
 	{
-	case HasProp:
-		break;
-	case DontHasProp:
-		m_Queries[QString("-%1").arg(name)] = "";
-		break;
-	case EqualProp:
-		m_Queries[QString("=%1").arg(name)] = value;
-		break;
-	case GreaterThanProp:
-		m_Queries[QString(">%1").arg(name)] = value;
-		break;
-	case LessThanProp:
-		m_Queries[QString("<%1").arg(name)] = value;
-		break;
-	case Operation:
-		m_Queries[QString("#%1").arg(name)] = value;
-		break;
-	default:
-		m_Queries[name] = value;
+	case HasProp:			return QString("?%1").arg(name);
+	case DontHasProp:		return QString("?-%1").arg(name);
+	case EqualProp:			return QString("?=%1=%2").arg(name).arg(value);
+	case GreaterThanProp:	return QString("?>%1=%2").arg(name).arg(value);
+	case LessThanProp:		return QString("?<%1=%2").arg(name).arg(value);
+	case Operation:			return QString("?#%1").arg(name);
 	}
+	return QString();
+}
+
+QQuery &QQuery::fromWord(const QString &queryString)
+{
+	if( queryString.count() < 3 )
+		return *this;
+
+	int from = 0;
+	if( queryString[0].toLatin1() == '?' )
+		from = 1;
+
+	switch( queryString[from].toLatin1() )
+	{
+	default:
+		if( splitWord(queryString, name, value, from) )
+			type = EqualProp;
+		else
+			type = HasProp;
+		break;
+	case '-':
+		type = DontHasProp;
+		name = queryString.right(from);
+		break;
+	case '=':
+		splitWord(queryString, name, value, from);
+		type = EqualProp;
+		break;
+	case '>':
+		splitWord(queryString, name, value, from);
+		type = GreaterThanProp;
+		break;
+	case '<':
+		splitWord(queryString, name, value, from);
+		type = LessThanProp;
+		break;
+	case '#':
+		name = queryString.right(from);
+		type = Operation;
+		break;
+	}
+	return *this;
+}
+
+
+void QQueries::addQuery(const QQuery &query)
+{
+	append(query);
+}
+
+void QQueries::addQuery(const QString &name)
+{
+	addQuery(QQuery(name));
+}
+
+void QQueries::addQuery(const QString &name, const QString &value, QQuery::Type t)
+{
+	addQuery(QQuery(name, value, t));
+}
+
+QStringList QQueries::toWords() const
+{
+	QStringList rtn;
+	for( int i = 0; i < count(); i++ )
+		rtn.append(at(i).toWord());
+	return rtn;
+}
+
+QString QSentence::toString() const
+{
+	QString rtn(m_cmd +
+				attributes().toWords().join("") +
+				APIattributes().toWords().join("") +
+				queries().toWords().join(""));
+
+	if( m_tag.count() )
+		rtn.append(QString(".tag=%1").arg(m_tag));
+	return rtn;
 }
 
 void QSentence::addWord(const QString &word)
 {
 	if( word.count() )
 	{
-		int p;
 		switch(word[0].toLatin1())
 		{
 		case '=':
-			p = word.indexOf('=', 1);
-			addAttribute(word.mid(1, p-1), word.right(word.count()-p-1));
+			attributes().addWord(word);
 			break;
 		case '.':
-			p = word.indexOf('=', 1);
 			if( word.startsWith(".tag") )
-				setTag(word.right(word.count()-p-1));
+				setTag(word.right(word.count()-5));
 			else
-				addAPIAttribute(word.mid(1, p-1), word.right(word.count()-p-1));
+				APIattributes().addWord(word);
 			break;
 		case '!':
 			if( word == "!done" )
@@ -91,8 +178,7 @@ void QSentence::addWord(const QString &word)
 			setCommand(word);
 			break;
 		case '?':
-			p = word.indexOf('=', 1);
-			addQuery(word.mid(1, p-1), word.right(word.count()-p-1));
+			queries().append(QQuery().fromWord(word));
 			break;
 		}
 	}
