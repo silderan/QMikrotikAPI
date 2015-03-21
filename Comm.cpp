@@ -25,9 +25,11 @@ Comm::~Comm()
  * If there is no tag provided in sentence info, a unique one
  * is created to send to and returned.
  * @param sent Sentence class with the info to sent to Router.
+ * @param addTag (Optional, default==true) Tells function to use (or,
+ * eventually create and use) a tag for sentence to sent.
  * @return tag used for sentence.
  */
-QString Comm::sendSentence(const QSentence &sent, bool bAddTag)
+QString Comm::sendSentence(const QSentence &sent, bool addTag)
 {
 	static int ID = 0;
 	QString word;
@@ -40,7 +42,7 @@ QString Comm::sendSentence(const QSentence &sent, bool bAddTag)
 	foreach( word, sent.queries().toWords() )
 		sendWord(word);
 
-	if( bAddTag )
+	if( addTag )
 	{
 		word = sent.tag();
 		if( word.isEmpty() )
@@ -65,10 +67,22 @@ void Comm::sendWord(const QString &word)
 	m_sock.write( word.toLatin1() );
 }
 
-/********************************************************************
- * Read a word from the socket
- * The word that was read is returned as a string
- ********************************************************************/
+/**
+ * @brief Comm::readWord
+ * Reads a word from ROS socket.
+ * At first, tries to read word length. After that, reads
+ * the word itself.
+ * When this functions returns -1 means that data is incompleted. So,
+ * can be recalled again when data is avaiable on socket to complete
+ * word reading.
+ * TODO: If word length info arrived is incomplete, there is no code
+ * to handle it and all will break up.
+ * @return up to if word was readed or not:
+ * -1: No data or incompleted readed from socket.
+ * -2 to -4: word length info incompleted. TODO: handle it.
+ * 0: Empty word readed.
+ * 1: Word readed.
+ */
 int Comm::readWord()
 {
 	if( incomingWordSize <= 0 )
@@ -80,9 +94,9 @@ int Comm::readWord()
 		case -2:// Cannot read 2nd byte (TODO: Handle it)
 		case -3:// Cannot read 3rd byte (TODO: Handle it)
 		case -4:// Cannot read 4th byte (TODO: Handle it)
-			throw "cannot read word length.";
-			break;
+			throw "Incomplete word length arrived.";
 		case 0:
+			// Empty word readed.
 			incomingWord.clear();
 			return 0;
 		}
@@ -93,33 +107,41 @@ int Comm::readWord()
 		incomingWordSize -= tmp.count();
 		incomingWord.append(tmp);
 	}
+	// If all word is readed, returns 1. Otherwise, -1 is returned.
 	return incomingWordSize == 0 ? 1 : -1;
 }
 
-/********************************************************************
- * Read a Sentence from the socket
- * A Sentence struct is returned
- ********************************************************************/
+/**
+ * @brief Comm::readSentence
+ * Reads socket data to fill incommingSentence structure.
+ * You can call this funcion when data is avaiable in socket.
+ */
 void Comm::readSentence()
 {
-	int i;
-	while( (i = readWord()) != 0 )
+	while( readWord() >= 0 )
 	{
-		switch( i )
+		if( incomingWord.isEmpty() )
 		{
-		case 1:
-			incomingSentence.addWord(incomingWord);
-			incomingWord.clear();
-			incomingWordSize = -1;
-			break;
-		case -1:
-			bIncomingCompleted = false;
+			sentenceCompleted = true;
 			return;
 		}
+		incomingSentence.addWord(incomingWord);
+		incomingWord.clear();
+		incomingWordSize = -1;
 	}
-	bIncomingCompleted = true;
+	sentenceCompleted = false;
 }
 
+/**
+ * @brief ROS::Comm::connectTo
+ * Starts connection to ROS at the addres addr and port.
+ * If cannot starts connection, emits a comError signal
+ * @param addr The addres where the ROS is. Can be a URL.
+ * @param port The port where the ROS API is listening.
+ * @return true if connection is started or false if not
+ * Currently, false is returned in case that the socket is
+ * not at UnconnectedState
+ */
 bool ROS::Comm::connectTo(const QString &addr, quint16 port)
 {
     if( QAbstractSocket::UnconnectedState != m_sock.state() )
@@ -132,6 +154,15 @@ bool ROS::Comm::connectTo(const QString &addr, quint16 port)
     return true;
 }
 
+/**
+ * @brief Comm::doLogin
+ * Tries to log into ROS.
+ * It uses a MD5 encoding process using the challenge reported by ROS.
+ * If there is some error, comError signal will be emited and socket
+ * will be closed inmediatly.
+ * This function will be called when data is present into socket until
+ * a succefull login is performed.
+ */
 void Comm::doLogin()
 {
 	switch( m_loginState )
@@ -140,7 +171,7 @@ void Comm::doLogin()
 		break;
 	case LoginRequested:
 	{
-		if( incomingSentence.getReturnType() != QSentence::Done )
+		if( incomingSentence.getResultType() != QSentence::Done )
 		{
 			emit comError(tr("Cannot login"));
 			m_loginState = NoLoged;
@@ -205,7 +236,7 @@ void Comm::doLogin()
 		break;
 	}
 	case UserPassSended:
-		if( incomingSentence.getReturnType() == QSentence::Done )
+		if( incomingSentence.getResultType() == QSentence::Done )
 		{
 			m_loginState = LogedIn;
 			incomingWordSize = -1;
@@ -228,23 +259,29 @@ void Comm::doLogin()
 	}
 }
 
-void Comm::writeLength(int messageLength)
+/**
+ * @brief Comm::writeLength
+ * Writes a word length on socket.
+ * This funcion must be called before sending word.
+ * @param wordLength The word length to write to socket.
+ */
+void Comm::writeLength(int wordLength)
 {
-    static char encodedLengthData[4];    // encoded length to send to the api socket
-    char *lengthData;           // exactly what is in memory at &iLen integer
+	static char encodedLengthData[4];	// encoded length to send to the api socket
+	char *lengthData;					// exactly what is in memory at &wordLength integer
 
     // set cLength address to be same as messageLength
-    lengthData = (char *)&messageLength;
+	lengthData = (char *)&wordLength;
 
     // write 1 byte
-    if( messageLength < 0x80 )
+	if( wordLength < 0x80 )
     {
         encodedLengthData[0] = lengthData[0];
 
         m_sock.write( encodedLengthData, 1 );
     }
     else
-    if( messageLength < 0x4000 )// write 2 bytes
+	if( wordLength < 0x4000 )// write 2 bytes
     {
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		encodedLengthData[0] = lengthData[1] | 0x80;
@@ -256,7 +293,7 @@ void Comm::writeLength(int messageLength)
         m_sock.write( encodedLengthData, 2 );
     }
     else
-    if( messageLength < 0x200000)// write 3 bytes
+	if( wordLength < 0x200000)// write 3 bytes
     {
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		encodedLengthData[0] = lengthData[2] | 0xc0;
@@ -270,7 +307,7 @@ void Comm::writeLength(int messageLength)
 		m_sock.write( encodedLengthData, 3 );
     }
     else
-    if( messageLength < 0x10000000 ) // write 4 bytes (untested)
+	if( wordLength < 0x10000000 ) // write 4 bytes (untested)
     {
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		encodedLengthData[0] = lengthData[3] | 0xe0;
@@ -287,23 +324,19 @@ void Comm::writeLength(int messageLength)
     }
     else
     {   // this should never happen
-        printf("Length of word is %d\n", messageLength);
+		printf("Length of word is %d\n", wordLength);
         printf("Word is too long.\n");
         throw "Word too long";
     }
 }
 
-/********************************************************************
- * Read a message length from the socket
- *
- * 80 = 10000000 (2 character encoded length)
- * C0 = 11000000 (3 character encoded length)
- * E0 = 11100000 (4 character encoded length)
- *
- * Message length is returned
- ********************************************************************/
-// TODO: Esta función tiene un par de fallos en la
-// asignación de memoria y se podría simplificar sin usar nada de ella.
+/**
+ * @brief Comm::readLength
+ * Reads a word length from socket.
+ * @return the length readed.
+ * @todo Esta función tiene un par de fallos en la
+ * asignación de memoria y se podría simplificar sin usar nada de ella.
+ */
 int Comm::readLength()
 {
 	char firstChar;			// first character read from socket
@@ -377,6 +410,11 @@ int Comm::readLength()
 	return retMessageLength;
 }
 
+/**
+ * @brief ROS::Comm::onError
+ * Slot connected to socket error signal.
+ * This slot emits comError and comConnected apropiatelly.
+ */
 void ROS::Comm::onError(QAbstractSocket::SocketError /*err*/)
 {
     if( m_sock.state() != QAbstractSocket::ConnectedState )
@@ -384,6 +422,14 @@ void ROS::Comm::onError(QAbstractSocket::SocketError /*err*/)
 	emit comError(m_sock.errorString());
 }
 
+/**
+ * @brief Comm::onConnected
+ * Slot connected to signal connected signal.
+ * This slot is called just once per comm sesion.
+ * Here, loginRequest is emited to obtain username and password
+ * for ROS login, and sends login command request to start the
+ * login proces.
+ */
 void Comm::onConnected()
 {
     emit comConnected(true);
@@ -397,20 +443,39 @@ void Comm::onConnected()
 	sendSentence( QSentence("/login"), false );
 }
 
+/**
+ * @brief Comm::onDisconnected
+ * Slot connectet to socket "disconnected" signal.
+ * Emits comConnected(false)
+ */
 void Comm::onDisconnected()
 {
 	emit comConnected(false);
 }
 
+/**
+ * @brief Comm::onHostLookup
+ * Slot called when ROS URL is resolved.
+ * if URL is just an IP, this function is called too.
+ * Emits addrFound()
+ */
 void Comm::onHostLookup()
 {
 	emit addrFound();
 }
 
+/**
+ * @brief Comm::onReadyRead
+ * Slot called when data is ready to be read from socket connected to ROS.
+ * This function fills up an internal QSentence struct. Once QSentence is
+ * filled, at begining, this function is used to login. When login is done,
+ * this function emits "comReceive(QSentence)" to allow application to
+ * do his job with the sentence sended by ROS.
+ */
 void Comm::onReadyRead()
 {
 	readSentence();
-	if( bIncomingCompleted )
+	if( sentenceCompleted )
 	{
 		if( m_loginState != LogedIn )
 			doLogin();
@@ -419,6 +484,6 @@ void Comm::onReadyRead()
 			emit comReceive(incomingSentence);
 			incomingSentence.clear();
 		}
-		bIncomingCompleted = false;
+		sentenceCompleted = false;
 	}
 }

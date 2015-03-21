@@ -53,14 +53,14 @@ struct QQuery
 	}
 	bool operator!=(const QQuery &q) { return !(this->operator ==(q)); }
 	QString toWord()const;
-	QQuery &fromWord(const QString &queryString);
+	QQuery &fromWord(const QString &word);
 };
 
 class QQueries : public QList<QQuery>
 {
 public:
 	void addQuery(const QQuery &query);
-	void addQuery(const QString &name);
+	void addQuery(const QString &word);
 	void addQuery(const QString &name, const QString &value, QQuery::Type t = QQuery::EqualProp);
 	QStringList toWords() const;
 	void addQueries(const QStringList &queries);
@@ -73,7 +73,7 @@ public:
 class QSentence : public QStringList
 {
 public:
-    enum ReturnType
+	enum Result
     {
         None = 0,
         Done = 1,
@@ -83,7 +83,7 @@ public:
 	};
 
 private:
-	ReturnType returnType;		// Sentence return type.
+	Result resultType;		// Sentence return type.
 	QString m_cmd;				// Sentence command.
 	QString m_tag;				// Sentence tag (if any)
 	QBasicAttrib m_Attributes;	// Attributes mapping.
@@ -102,8 +102,8 @@ public:
 	{
 	}
 
-	inline void setReturnType(ReturnType r) { returnType = r; }
-    inline ReturnType getReturnType() const { return returnType; }
+	inline void setResultType(Result r) { resultType = r; }
+	inline Result getResultType() const { return resultType; }
 	QString toString() const;
 
 	void clear()
@@ -114,7 +114,7 @@ public:
 		m_Attributes.clear();
 		m_APIAttributes.clear();
 		m_Queries.clear();
-		returnType = None;
+		resultType = None;
 	}
 	inline void setCommand(const QString &cmd) { m_cmd = cmd; }
 	inline const QString &command() const { return m_cmd; }
