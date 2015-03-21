@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "APICom.h"
+#include "Comm.h"
 #include "QSentences.h"
 #include "QIniFile.h"
 
@@ -55,7 +55,7 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 	Ui::MainWindow *ui;
-	Mkt::APICom mktAPI;
+	ROS::Comm mktAPI;
 
 public:
     explicit MainWindow(QWidget *parent = 0);
@@ -67,7 +67,7 @@ private slots:
 	void onLoginRequest(QString *user, QString *pass);
 	void onURLResolved();
 	void onCommError(const QString &error);
-	void onReceive(Mkt::QSentence &s);
+	void onReceive(ROS::QSentence &s);
 	void onRouterListening();
 };
 

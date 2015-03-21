@@ -21,7 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect( &mktAPI, SIGNAL(comError(QString)), this, SLOT(onCommError(QString)) );
 	connect( &mktAPI, SIGNAL(loginRequest(QString*,QString*)), this, SLOT(onLoginRequest(QString*,QString*)) );
 	connect( &mktAPI, SIGNAL(routerListening()), this, SLOT(onRouterListening()) );
-	connect( &mktAPI, SIGNAL(comReceive(Mkt::QSentence&)), this, SLOT(onReceive(Mkt::QSentence&)) );
+	connect( &mktAPI, SIGNAL(comReceive(ROS::QSentence&)), this, SLOT(onReceive(ROS::QSentence&)) );
 }
 
 MainWindow::~MainWindow()
@@ -66,12 +66,15 @@ void MainWindow::onCommError(const QString &error)
 	ui->lwResponses->addItem("Comm Error: "+error);
 }
 
-void MainWindow::onReceive(Mkt::QSentence &s)
+void MainWindow::onReceive(ROS::QSentence &s)
 {
 	ui->lwResponses->addItem(s.toString());
 }
 
 void MainWindow::onRouterListening()
 {
-	mktAPI.writeSentence("/interface/getall");
+	ROS::QSentence s("/interface/getall");
+	QString tag = mktAPI.sendSentence( s );
+	s.setTag(tag);
+
 }

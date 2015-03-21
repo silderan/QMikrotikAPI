@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "APICom.h"
+#include "Comm.h"
 using namespace std;
 
 void Tokenize(const string &str, vector<string> &tokens, const string &delimiters)

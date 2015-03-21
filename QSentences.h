@@ -4,21 +4,24 @@
 #include <QMap>
 #include <QStringList>
 
-namespace Mkt
+namespace ROS
 {
 
 class QBasicAttrib : public QMap<QString, QString>
 {
 	char firstCh;
 public:
-	QBasicAttrib(char c) : firstCh(c)
-	{ }
+	QBasicAttrib(char c, const QStringList &words = QStringList()) : firstCh(c)
+	{
+		addWords(words);
+	}
 	inline void addAttribute(const QString &name, const QString &value)  { (*this)[name] = value; }
 	inline QString attribute(const QString &name) const { return (*this)[name]; }
 	QStringList toWords() const;
 	QString toWord(const QString &name)const;
-	void addWord(const QString &attribStr);
+	void addWord(const QString &word);
 	void addWord(const QString &name, const QString &value);
+	void addWords(const QStringList &words);
 };
 
 struct QQuery
@@ -60,6 +63,11 @@ public:
 	void addQuery(const QString &name);
 	void addQuery(const QString &name, const QString &value, QQuery::Type t = QQuery::EqualProp);
 	QStringList toWords() const;
+	void addQueries(const QStringList &queries);
+	QQueries(const QStringList &queries)
+	{
+		addQueries(queries);
+	}
 };
 
 class QSentence : public QStringList
@@ -71,8 +79,7 @@ public:
         Done = 1,
         Trap = 2,
 		Fatal = 3,
-		Reply = 4,
-		Partial = 5	// Still receiving data from ROS.
+		Reply = 4
 	};
 
 private:
@@ -84,8 +91,17 @@ private:
 	QQueries m_Queries;			// Queries list.
 
 public:
-	QSentence() : m_Attributes('='), m_APIAttributes('.')
-	{ }
+	QSentence(const QString &cmd = QString(), const QString &tag = QString(),
+			  const QStringList &attribs = QStringList(),
+			  const QStringList &APIAtts = QStringList(),
+			  const QStringList &Queries = QStringList() )
+		: m_cmd(cmd), m_tag(tag),
+		  m_Attributes('=', attribs),
+		  m_APIAttributes('.', APIAtts),
+		  m_Queries(Queries)
+	{
+	}
+
 	inline void setReturnType(ReturnType r) { returnType = r; }
     inline ReturnType getReturnType() const { return returnType; }
 	QString toString() const;

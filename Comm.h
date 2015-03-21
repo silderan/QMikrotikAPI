@@ -8,9 +8,9 @@
 #include "QMD5.h"
 #include "QSentences.h"
 
-namespace Mkt
+namespace ROS
 {
-class APICom : public QObject
+class Comm : public QObject
 {
     Q_OBJECT
     QTcpSocket m_sock;
@@ -20,6 +20,7 @@ class APICom : public QObject
     QString m_Password;
 	QByteArray incomingWord;
 	QSentence incomingSentence;
+	bool bIncomingCompleted;
 	enum LoginState
 	{
 		NoLoged,
@@ -34,18 +35,17 @@ class APICom : public QObject
 	void sendUser();
 
 protected:
-    void writeLength(int messageLength);
+	void writeLength(int messageLength);
     int readLength();
-	void writeWord(const QString &strWord);
+	void sendWord(const QString &strWord);
 	int readWord();
 	void readSentence();
 
 public:
-    APICom(QObject *papi = NULL);
-    ~APICom();
+	Comm(QObject *papi = NULL);
+	~Comm();
 
-//	void writeSentence(const Mkt::QSentence &writeSentence);
-	void writeSentence(const QString &sentence);
+	QString sendSentence(const ROS::QSentence &sent, bool bAddTag = true);
 
 	bool isConnected() const { return m_sock.state() == QAbstractSocket::ConnectedState;	}
 
@@ -65,7 +65,7 @@ signals:
 	void comError(const QString &error);
     void addrFound();
     void loginRequest(QString *user, QString *pass);
-	void comReceive(Mkt::QSentence &s);
+	void comReceive(ROS::QSentence &s);
 	void routerListening();
 };
 }

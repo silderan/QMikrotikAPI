@@ -1,8 +1,8 @@
-#include "APICom.h"
+#include "Comm.h"
 
-using namespace Mkt;
+using namespace ROS;
 
-APICom::APICom(QObject *papi)
+Comm::Comm(QObject *papi)
  : QObject(papi), m_loginState(NoLoged), incomingWordSize(-1)
 {
 	connect( &m_sock, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(onError(QAbstractSocket::SocketError)) );
@@ -14,28 +14,62 @@ APICom::APICom(QObject *papi)
 	connect( &m_sock, SIGNAL(readyRead()), this, SLOT(onReadyRead()) );
 }
 
-APICom::~APICom()
+Comm::~Comm()
 {
 	m_sock.close();
 }
 
-void APICom::writeWord(const QString &word)
+/**
+ * @brief Comm::writeSentence
+ * Sends a full sentence.
+ * If there is no tag provided in sentence info, a unique one
+ * is created to send to and returned.
+ * @param sent Sentence class with the info to sent to Router.
+ * @return tag used for sentence.
+ */
+QString Comm::sendSentence(const QSentence &sent, bool bAddTag)
+{
+	static int ID = 0;
+	QString word;
+
+	sendWord(sent.command());
+	foreach( word, sent.attributes().toWords() )
+		sendWord(word);
+	foreach( word, sent.APIattributes().toWords() )
+		sendWord(word);
+	foreach( word, sent.queries().toWords() )
+		sendWord(word);
+
+	if( bAddTag )
+	{
+		word = sent.tag();
+		if( word.isEmpty() )
+			word = QString("%1").arg(++ID);
+		sendWord(QString(".tag=%1").arg(word));
+	}
+	else
+		word.clear();
+	sendWord("");
+	return word;
+}
+
+/**
+ * @brief Comm::sendWord
+ * Sends a word to router.
+ * Word lenght is calculated and is sended before word itself.
+ * @param word
+ */
+void Comm::sendWord(const QString &word)
 {
 	writeLength( word.count() );
 	m_sock.write( word.toLatin1() );
-}
-
-void APICom::writeSentence(const QString &sentence)
-{
-	writeWord(sentence);
-	writeWord("");
 }
 
 /********************************************************************
  * Read a word from the socket
  * The word that was read is returned as a string
  ********************************************************************/
-int APICom::readWord()
+int Comm::readWord()
 {
 	if( incomingWordSize <= 0 )
 		switch( incomingWordSize = readLength() )
@@ -66,7 +100,7 @@ int APICom::readWord()
  * Read a Sentence from the socket
  * A Sentence struct is returned
  ********************************************************************/
-void APICom::readSentence()
+void Comm::readSentence()
 {
 	int i;
 	while( (i = readWord()) != 0 )
@@ -79,45 +113,14 @@ void APICom::readSentence()
 			incomingWordSize = -1;
 			break;
 		case -1:
-			// Aun no ha sacado del todo la palabra. Esperaremos al siguiente evento del socket.
-			incomingSentence.setReturnType(QSentence::Partial);
+			bIncomingCompleted = false;
 			return;
 		}
 	}
-	// Ha llegado la cadena vacía. Vamos a procesar lo que nos ha llegado.
-
-	// check to see if we can get a return value from the API
-	if( incomingSentence.count() )
-	{
-		if( incomingSentence.first().startsWith("!done") )
-		{
-			incomingSentence.removeFirst();
-			incomingSentence.setReturnType(QSentence::Done);
-		}
-		else
-		if( incomingSentence.first().startsWith("!trap") )
-		{
-			incomingSentence.removeFirst();
-			incomingSentence.setReturnType(QSentence::Trap);
-		}
-		else
-		if( incomingSentence.first().startsWith("!fatal") )
-		{
-			incomingSentence.removeFirst();
-			incomingSentence.setReturnType(QSentence::Fatal);
-		}
-		else
-		if( incomingSentence.first().startsWith("!re") )
-		{
-			incomingSentence.removeFirst();
-			incomingSentence.setReturnType(QSentence::Reply);
-		}
-		else
-			incomingSentence.setReturnType(QSentence::None);
-	}
+	bIncomingCompleted = true;
 }
 
-bool Mkt::APICom::connectTo(const QString &addr, quint16 port)
+bool ROS::Comm::connectTo(const QString &addr, quint16 port)
 {
     if( QAbstractSocket::UnconnectedState != m_sock.state() )
 	{
@@ -129,7 +132,7 @@ bool Mkt::APICom::connectTo(const QString &addr, quint16 port)
     return true;
 }
 
-void APICom::doLogin()
+void Comm::doLogin()
 {
 	switch( m_loginState )
 	{
@@ -191,10 +194,10 @@ void APICom::doLogin()
 		QString md5PasswordToSend = QMD5::DigestToHexString(digest);
 
 		// put together the login sentence
-		writeWord("/login");
-		writeWord(QString("=name=%1").arg(m_Username));
-		writeWord(QString("=response=00%1").arg(md5PasswordToSend));
-		writeWord("");
+		sendWord("/login");
+		sendWord(QString("=name=%1").arg(m_Username));
+		sendWord(QString("=response=00%1").arg(md5PasswordToSend));
+		sendWord("");
 
 		incomingSentence.clear();
 		incomingWordSize = -1;
@@ -225,7 +228,7 @@ void APICom::doLogin()
 	}
 }
 
-void APICom::writeLength(int messageLength)
+void Comm::writeLength(int messageLength)
 {
     static char encodedLengthData[4];    // encoded length to send to the api socket
     char *lengthData;           // exactly what is in memory at &iLen integer
@@ -301,7 +304,7 @@ void APICom::writeLength(int messageLength)
  ********************************************************************/
 // TODO: Esta función tiene un par de fallos en la
 // asignación de memoria y se podría simplificar sin usar nada de ella.
-int APICom::readLength()
+int Comm::readLength()
 {
 	char firstChar;			// first character read from socket
 	char *lengthData;		// length of next message to read...will be cast to int at the end
@@ -374,14 +377,14 @@ int APICom::readLength()
 	return retMessageLength;
 }
 
-void Mkt::APICom::onError(QAbstractSocket::SocketError /*err*/)
+void ROS::Comm::onError(QAbstractSocket::SocketError /*err*/)
 {
     if( m_sock.state() != QAbstractSocket::ConnectedState )
         emit comConnected(false);
 	emit comError(m_sock.errorString());
 }
 
-void APICom::onConnected()
+void Comm::onConnected()
 {
     emit comConnected(true);
 
@@ -391,23 +394,23 @@ void APICom::onConnected()
 	m_loginState = LoginRequested;
 	incomingSentence.clear();
 	//Send login message
-	writeSentence("/login");
+	sendSentence( QSentence("/login"), false );
 }
 
-void APICom::onDisconnected()
+void Comm::onDisconnected()
 {
 	emit comConnected(false);
 }
 
-void APICom::onHostLookup()
+void Comm::onHostLookup()
 {
 	emit addrFound();
 }
 
-void APICom::onReadyRead()
+void Comm::onReadyRead()
 {
 	readSentence();
-	if( incomingSentence.getReturnType() != QSentence::Partial )
+	if( bIncomingCompleted )
 	{
 		if( m_loginState != LogedIn )
 			doLogin();
@@ -416,5 +419,6 @@ void APICom::onReadyRead()
 			emit comReceive(incomingSentence);
 			incomingSentence.clear();
 		}
+		bIncomingCompleted = false;
 	}
 }

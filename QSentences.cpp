@@ -1,6 +1,6 @@
 #include "QSentences.h"
 
-using namespace Mkt;
+using namespace ROS;
 
 bool splitWord(const QString &word, QString &name, QString &value, int from)
 {
@@ -41,15 +41,21 @@ void QBasicAttrib::addWord(const QString &name, const QString &value)
 	insert(name, value);
 }
 
-void QBasicAttrib::addWord(const QString &attribStr)
+void QBasicAttrib::addWords(const QStringList &words)
 {
-	if( attribStr.count() < 3 )
+	foreach( QString word, words )
+		addWord(word);
+}
+
+void QBasicAttrib::addWord(const QString &word)
+{
+	if( word.count() < 3 )
 		return;
 
-	int from = attribStr[0].toLatin1() == firstCh ? 1 : 0;
+	int from = word[0].toLatin1() == firstCh ? 1 : 0;
 	QString name;
 	QString value;
-	splitWord(attribStr, name, value, from);
+	splitWord(word, name, value, from);
 	addWord(name, value);
 }
 
@@ -130,6 +136,12 @@ QStringList QQueries::toWords() const
 	for( int i = 0; i < count(); i++ )
 		rtn.append(at(i).toWord());
 	return rtn;
+}
+
+void QQueries::addQueries(const QStringList &queries)
+{
+	foreach( QString query, queries)
+		addQuery(query);
 }
 
 QString QSentence::toString() const
