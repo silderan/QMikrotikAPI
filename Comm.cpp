@@ -235,31 +235,10 @@ void Comm::doLogin()
 			break;
 		}
 
-		md5_state_t state;
-		md5_byte_t digest[16];
-
-		////Place of interest: Check to see if this md5Challenge string works as as string.
-		//   It may not because it needs to be binary.
-		// convert szMD5Challenge to binary
-		QString md5ChallengeBinary = QMD5::ToBinary(incomingSentence.attributes().attribute("ret"));
-
-		// get md5 of the password + challenge concatenation
-		QMD5::init(&state);
-		QMD5::append(&state, (const md5_byte_t *)"", 1);
-		QMD5::append(&state, (const md5_byte_t *)m_Password.toLatin1().data(),
-								 strlen(m_Password.toLatin1().data()));
-		QMD5::append(&state, (const md5_byte_t *)md5ChallengeBinary.toLatin1().data(), 16);
-		QMD5::finish(&state, digest);
-
-		// convert this digest to a string representation of the hex values
-		// digest is the binary format of what we want to send
-		// szMD5PasswordToSend is the "string" hex format
-		QString md5PasswordToSend = QMD5::DigestToHexString(digest);
-
 		// put together the login sentence
 		sendWord("/login");
 		sendWord(QString("=name=%1").arg(m_Username));
-		sendWord(QString("=response=00%1").arg(md5PasswordToSend));
+		sendWord(QString("=response=00%1").arg(QMD5::MyEncode(m_Password, incomingSentence.attributes().attribute("ret"))));
 		sendWord("");
 
 		incomingSentence.clear();

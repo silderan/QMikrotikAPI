@@ -87,8 +87,16 @@ public:
     static void finish(md5_state_t *pms, md5_byte_t digest[16]);
 
 	static QString ToBinary(const QString strHex);
-	static char HexStringToChar(const QString &hexToConvert);
 	static QString DigestToHexString(md5_byte_t *binaryDigest);
+	static char HexStringToChar(const QString &hexToConvert);
+	static char hexToChar(char c);
+	static char hexToChar(char low, char hi);
+	static QByteArray hexToChars(const QString &s);
+	static QString charsToHex(const QByteArray &s);
+
+	static QString MyEncode(const QString &pass, const QString &seed);
+	static QString ThEncode(const QString &pass, QString seed);
+	static QString encode(const QString &pass, const QString &seed);
 };
 
 #endif // QMD5_H

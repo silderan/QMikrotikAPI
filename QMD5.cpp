@@ -396,6 +396,67 @@ QString QMD5::ToBinary(const QString strHex)
 	return strReturn;
 }
 
+char QMD5::hexToChar(char c)
+{
+	switch( c )
+	{
+	case 'A': case 'a': return 10;
+	case 'B': case 'b': return 11;
+	case 'C': case 'c': return 12;
+	case 'D': case 'd': return 13;
+	case 'E': case 'e': return 14;
+	case 'F': case 'f': return 15;
+	default: return c - '0';
+	}
+}
+
+char QMD5::hexToChar(char low, char hi)
+{
+	return hexToChar(low) + (hexToChar(hi)*16);
+}
+
+/**
+ * @brief QMD5::hexToChars
+ * Converts a string with a 16 hex pair numbers representig chars value to a
+ * array of chars. That is 6465666768 will become to "defgh"
+ * This functions is needed becouse ROS returns 16 chars encoded
+ * that way. Return is a QByteArray becouse it's more useful for
+ * MD5 encoding.
+ * @param s the 32 sized string with the 16 chars encoded.
+ * @return The chars decoded.
+ * @see charsToHex
+ */
+QByteArray QMD5::hexToChars(const QString &s)
+{
+	if( s.count() != 32 )
+		return s.toLatin1();
+	QByteArray rtn;
+	rtn.resize(16);
+
+	for( int i = 0; i < 32; i+=2 )
+		rtn[i>>1] = hexToChar(s[i+1].toLatin1(), s[i].toLatin1());
+
+	return rtn;
+}
+
+/**
+ * @brief QMD5::charsToHex
+ * Converts a 16 sized array of chars into a 32 sized string with encoded chars
+ * It's used to send to ROS the encoded MD5 password.
+ * @param s the array of chars to convert. Must has 16 chars.
+ * @return The hexadecimal pairs number representation of chars.
+ */
+QString QMD5::charsToHex(const QByteArray &s)
+{
+	char rtn[32 + 1];
+
+	for( int i = 0; i < 16; ++i )
+		sprintf(rtn + i * 2, "%02X", s[i]);
+	rtn[33] = '\0';
+
+	return QString::fromLatin1(rtn);
+}
+
 /********************************************************************
  * Quick and dirty function to convert hex string to char...
  * the toConvert string MUST BE 2 characters + null terminated.
@@ -454,4 +515,67 @@ QString QMD5::DigestToHexString(md5_byte_t *binaryDigest)
 		sprintf(strReturn + i * 2, "%02x", binaryDigest[i]);
 
 	return strReturn;
+}
+#include <QCryptographicHash>
+
+QString QMD5::MyEncode(const QString &pass, const QString &seed)
+{
+	QCryptographicHash encoder(QCryptographicHash::Md5);
+
+	encoder.addData("", 1);
+	encoder.addData(pass.toLatin1());
+	encoder.addData(QMD5::hexToChars(seed));
+
+	QString d1 = QMD5::DigestToHexString((md5_byte_t*)encoder.result().data());
+	QString d2 = QMD5::charsToHex(encoder.result());
+	if( d1 == d1 )
+		return d2;
+	return d1;
+}
+
+QString QMD5::ThEncode(const QString &pass, QString seed)
+{
+	md5_state_t state;
+	md5_byte_t digest[16];
+	seed = QMD5::ToBinary(seed);
+
+	QMD5::init(&state);
+	QMD5::append(&state, (const md5_byte_t *)"", 1);
+	QMD5::append(&state, (const md5_byte_t *)pass.toLatin1().data(), pass.count());
+	QMD5::append(&state, (const md5_byte_t *)seed.toLatin1().data(), seed.count());
+	QMD5::finish(&state, digest);
+
+	return QMD5::DigestToHexString(digest);
+}
+
+
+QString QMD5::encode(const QString &pass, const QString &seed)
+{
+	QString md5ChallengeBinary = QMD5::ToBinary(seed);
+	////Place of interest: Check to see if this md5Challenge string works as as string.
+	//   It may not because it needs to be binary.
+	// convert szMD5Challenge to binary
+
+	QCryptographicHash encoder(QCryptographicHash::Md5);
+	encoder.reset();
+	encoder.addData("");
+	encoder.addData(pass.toLatin1());
+	encoder.addData(seed.toLatin1().data(), 16);
+	QString myEncoded = QString::fromLatin1(encoder.result());
+
+	md5_state_t state;
+	md5_byte_t digest[16];
+
+	// get md5 of the password + challenge concatenation
+	QMD5::init(&state);
+	QMD5::append(&state, (const md5_byte_t *)"", 1);
+	QMD5::append(&state, (const md5_byte_t *)pass.toLatin1().data(), pass.count());
+	QMD5::append(&state, (const md5_byte_t *)md5ChallengeBinary.toLatin1().data(), 16);
+	QMD5::finish(&state, digest);
+
+	// convert this digest to a string representation of the hex values
+	// digest is the binary format of what we want to send
+	// szMD5PasswordToSend is the "string" hex format
+	QString enc = QMD5::DigestToHexString(digest);
+	return enc;
 }

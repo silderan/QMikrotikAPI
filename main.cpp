@@ -30,18 +30,14 @@ int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
     MainWindow w;
-
-/*    md5_state_t state;
-    md5_byte_t out[16];
-    char hola[5] = "hola";
-    QMD5::init(&state);
-	QMD5::append(&state, (md5_byte_t*)hola, 4);
-	QMD5::finish(&state, out);
-
-    QCryptographicHash h(QCryptographicHash::Md5);
-    h.addData(hola,4);
-    QByteArray b = h.result();
-*/
+//	QByteArray ori = "65660F0F0F0F0F0F0F0F0F0F0F0F0F0F";
+//	QByteArray ch1 = QMD5::ToBinary(QString::fromLatin1(ori)).toLatin1();
+//	QByteArray ch2 = QMD5::hexToChars(ori);
+//	QString or1 = QMD5::charsToHex(ch1);
+//	QString or2 = QMD5::DigestToHexString((md5_byte_t*)ch1.data());
+//	QString My = QMD5::MyEncode("hola", ori);
+//	QString Th = QMD5::ThEncode("hola", ori);
+//	QString Ps = QMD5::encode("hola", ori);
 	w.show();
 
     return a.exec();
