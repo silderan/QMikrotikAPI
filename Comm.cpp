@@ -6,12 +6,9 @@ Comm::Comm(QObject *papi)
  : QObject(papi), m_loginState(NoLoged), incomingWordSize(-1)
 {
 	connect( &m_sock, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(onError(QAbstractSocket::SocketError)) );
-    connect( &m_sock, SIGNAL(hostFound()), this, SLOT(onHostLookup()) );
-	connect( &m_sock, SIGNAL(connected()), this, SLOT(onConnected()) );
-
 	connect( &m_sock, SIGNAL(readyRead()), this, SLOT(onReadyRead()) );
-	connect( &m_sock, SIGNAL(disconnected()), this, SLOT(onDisconnected()) );
-	connect( &m_sock, SIGNAL(readyRead()), this, SLOT(onReadyRead()) );
+	connect( &m_sock, SIGNAL(stateChanged(QAbstractSocket::SocketState)),
+			 this, SLOT(onSocketStateChanges(QAbstractSocket::SocketState)) );
 }
 
 Comm::~Comm()
@@ -151,9 +148,34 @@ bool ROS::Comm::connectTo(const QString &addr, quint16 port)
 	}
 
     m_sock.connectToHost(m_addr = addr, m_port = port);
-    return true;
+	return true;
 }
 
+/**
+ * @brief Comm::closeCom
+ * Closes connection to ROS.
+ * If force is true, the connection will be closed inmediatly and
+ * pending data on socket buffer will be discarded. If false, the
+ * close could take a variable time because tries to close gracefully
+ * and sends all remaining data in out socket buffer.
+ * @param force (optional, defaults: false) True if you want/need to
+ * force the closing.
+ */
+void Comm::closeCom(bool force)
+{
+	if( isConnected() )
+	{
+		if( force )
+		{
+			m_sock.abort();
+			m_sock.close();
+			emit comStateChanged(Unconnected);
+			emit comError(tr("forced abort/close on socket"));
+		}
+		else
+			m_sock.disconnectFromHost();
+	}
+}
 /**
  * @brief Comm::doLogin
  * Tries to log into ROS.
@@ -174,14 +196,14 @@ void Comm::doLogin()
 		if( incomingSentence.getResultType() != QSentence::Done )
 		{
 			emit comError(tr("Cannot login"));
-			m_loginState = NoLoged;
+			setLoginState(NoLoged);
 			m_sock.close();
 			break;
 		}
 		if( incomingSentence.attributes().count() != 1 )
 		{
 			emit comError(tr("Unknown remote login sentence format: didn't receive anything"));
-			m_loginState = NoLoged;
+			setLoginState(NoLoged);
 			incomingSentence.clear();
 			m_sock.close();
 			break;
@@ -189,7 +211,7 @@ void Comm::doLogin()
 		if( !incomingSentence.attributes().attribute("ret").count() )
 		{
 			emit comError(tr("Unknown remote login sentence format: Doesn't receive 'ret' namefield"));
-			m_loginState = NoLoged;
+			setLoginState(NoLoged);
 			incomingSentence.clear();
 			m_sock.close();
 			break;
@@ -197,7 +219,7 @@ void Comm::doLogin()
 		if( incomingSentence.attributes().attribute("ret").count() != 32 )
 		{
 			emit comError(tr("Unknown remote login sentence format: 'ret' field doesn't contains 32 characters"));
-			m_loginState = NoLoged;
+			setLoginState(NoLoged);
 			incomingSentence.clear();
 			m_sock.close();
 			break;
@@ -232,20 +254,19 @@ void Comm::doLogin()
 
 		incomingSentence.clear();
 		incomingWordSize = -1;
-		m_loginState = UserPassSended;
+		setLoginState(UserPassSended);
 		break;
 	}
 	case UserPassSended:
 		if( incomingSentence.getResultType() == QSentence::Done )
 		{
-			m_loginState = LogedIn;
 			incomingWordSize = -1;
 			incomingSentence.clear();
-			emit routerListening();
+			setLoginState(LogedIn);
 		}
 		else
 		{
-			m_loginState = NoLoged;
+			setLoginState(NoLoged);
 			emit comError(tr("Invalid Username or Password"));
 			emit comError(tr("remote msg: %1").arg(incomingSentence.attributes().attribute("message")));
 			incomingWordSize = -1;
@@ -257,6 +278,14 @@ void Comm::doLogin()
 		throw "router is loged already in";
 		break;
 	}
+}
+
+void Comm::setLoginState(Comm::LoginState s)
+{
+	if( s != m_loginState )
+		emit loginStateChanged(m_loginState = s);
+	else
+		m_loginState = s;
 }
 
 /**
@@ -417,51 +446,9 @@ int Comm::readLength()
  */
 void ROS::Comm::onError(QAbstractSocket::SocketError /*err*/)
 {
-    if( m_sock.state() != QAbstractSocket::ConnectedState )
-        emit comConnected(false);
+	if( m_sock.state() != QAbstractSocket::ConnectedState )
+		emit comStateChanged(Unconnected);
 	emit comError(m_sock.errorString());
-}
-
-/**
- * @brief Comm::onConnected
- * Slot connected to signal connected signal.
- * This slot is called just once per comm sesion.
- * Here, loginRequest is emited to obtain username and password
- * for ROS login, and sends login command request to start the
- * login proces.
- */
-void Comm::onConnected()
-{
-    emit comConnected(true);
-
-	m_loginState = NoLoged;
-	emit loginRequest(&m_Username, &m_Password);
-
-	m_loginState = LoginRequested;
-	incomingSentence.clear();
-	//Send login message
-	sendSentence( QSentence("/login"), false );
-}
-
-/**
- * @brief Comm::onDisconnected
- * Slot connectet to socket "disconnected" signal.
- * Emits comConnected(false)
- */
-void Comm::onDisconnected()
-{
-	emit comConnected(false);
-}
-
-/**
- * @brief Comm::onHostLookup
- * Slot called when ROS URL is resolved.
- * if URL is just an IP, this function is called too.
- * Emits addrFound()
- */
-void Comm::onHostLookup()
-{
-	emit addrFound();
 }
 
 /**
@@ -485,5 +472,47 @@ void Comm::onReadyRead()
 			incomingSentence.clear();
 		}
 		sentenceCompleted = false;
+	}
+}
+
+/**
+ * @brief Comm::onSocketStateChanges
+ * Slot connected to stateChanged socket signal.
+ * This function emits the new state of the socket
+ * using internal enum.
+ * @param s The new socket state.
+ */
+void Comm::onSocketStateChanges(QAbstractSocket::SocketState s)
+{
+	switch( s )
+	{
+	case QAbstractSocket::UnconnectedState:
+		emit comStateChanged(Unconnected);
+		return;
+	case QAbstractSocket::HostLookupState:
+		emit comStateChanged(HostLookup);
+		return;
+	case QAbstractSocket::ConnectingState:
+		emit comStateChanged(Connecting);
+		return;
+	case QAbstractSocket::ConnectedState:
+		emit comStateChanged(Connected);
+
+		setLoginState(NoLoged);
+		emit loginRequest(&m_Username, &m_Password);
+
+		setLoginState(LoginRequested);
+		incomingSentence.clear();
+		//Send login message
+		sendSentence( QSentence("/login"), false );
+
+		return;
+	case QAbstractSocket::BoundState: // Este estado sólo se da en caso de ser un servidor.
+		return;
+	case QAbstractSocket::ClosingState:
+		emit comStateChanged(Closing);
+		return;
+	case QAbstractSocket::ListeningState: // Este estado sólo se da en caso de ser un servidor.
+		return;
 	}
 }

@@ -16,11 +16,15 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->leUser->setText(gGlobalConfig.getUserName());
 	ui->lePass->setText(gGlobalConfig.getUserPass());
 
-	connect( &mktAPI, SIGNAL(comConnected(bool)), SLOT(onConnected(bool)) );
-	connect( &mktAPI, SIGNAL(addrFound()), this, SLOT(onURLResolved()) );
 	connect( &mktAPI, SIGNAL(comError(QString)), this, SLOT(onCommError(QString)) );
 	connect( &mktAPI, SIGNAL(loginRequest(QString*,QString*)), this, SLOT(onLoginRequest(QString*,QString*)) );
 	connect( &mktAPI, SIGNAL(routerListening()), this, SLOT(onRouterListening()) );
+
+	connect( &mktAPI, SIGNAL(comStateChanged(ROS::Comm::CommState)),
+			 this, SLOT(onStateChanged(ROS::Comm::CommState)) );
+	connect( &mktAPI, SIGNAL(loginStateChanged(ROS::Comm::LoginState)),
+			 this, SLOT(onLoginChanged(ROS::Comm::LoginState)) );
+
 	connect( &mktAPI, SIGNAL(comReceive(ROS::QSentence&)), this, SLOT(onReceive(ROS::QSentence&)) );
 }
 
@@ -36,29 +40,87 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::on_pushButton_clicked()
+void MainWindow::on_pbConnect_clicked()
 {
-	mktAPI.connectTo(ui->leIP->text(), (unsigned short)ui->sbPort->value());
+	if( mktAPI.isClosing() )
+	{
+		ui->pbConnect->setText("Forzando cierre");
+		mktAPI.closeCom(true);
+	}
+	else
+	if( mktAPI.isLoged() )
+	{
+		ui->pbConnect->setText("Cerrando conexión");
+		mktAPI.closeCom();
+	}
+	else
+	if( mktAPI.isConnected() || mktAPI.isConnecting() )
+	{
+		ui->pbConnect->setText("Cerrando conexión");
+		mktAPI.closeCom();
+	}
+	else
+	if( mktAPI.connectTo(ui->leIP->text(), (unsigned short)ui->sbPort->value()) )
+		ui->pbConnect->setText("Cancelar");
 }
 
-void MainWindow::onConnected(bool succeful)
+
+void MainWindow::onStateChanged(ROS::Comm::CommState s)
 {
-	if( succeful )
-		ui->lwResponses->addItem("Conectado");
-	else
-		ui->lwResponses->addItem("Desconectado");
+	switch( s )
+	{
+	case ROS::Comm::Unconnected:
+		ui->pbConnect->setText( tr("Conectar") );
+		ui->lwResponses->addItem( tr("Desconectado") );
+		break;
+	case ROS::Comm::HostLookup:
+		ui->pbConnect->setText( tr("Cancelar") ) ;
+		ui->lwResponses->addItem( tr("Resolviendo URL") );
+		break;
+	case ROS::Comm::Connecting:
+		ui->pbConnect->setText( tr("Cancelar") );
+		ui->lwResponses->addItem( tr("Conectando al servidor") );
+		break;
+	case ROS::Comm::Connected:
+		ui->pbConnect->setText( tr("Desconectar") );
+		ui->lwResponses->addItem( tr("Conectado") );
+		break;
+	case ROS::Comm::Closing:
+		ui->pbConnect->setText( tr("Forzar desconexión") );
+		ui->lwResponses->addItem( tr("Cerrando conexión") );
+		break;
+	}
 }
+
+void MainWindow::onLoginChanged(ROS::Comm::LoginState s)
+{
+	switch( s )
+	{
+	case ROS::Comm::NoLoged:
+		ui->lwResponses->addItem( tr("No está identificado en el servidor") );
+		break;
+	case ROS::Comm::LoginRequested:
+		ui->lwResponses->addItem( tr("Usuario y contraseña pedidos") );
+		break;
+	case ROS::Comm::UserPassSended:
+		ui->lwResponses->addItem( tr("Petición de login en curso") );
+		break;
+	case ROS::Comm::LogedIn:
+		ui->lwResponses->addItem( tr("Logado al servidor") );
+		ui->pbConnect->setText("Desconectar");
+
+		ROS::QSentence s("/interface/getall");
+		QString tag = mktAPI.sendSentence( s );
+		s.setTag(tag);
+		break;
+	}
+}
+
 
 void MainWindow::onLoginRequest(QString *user, QString *pass)
 {
-	ui->lwResponses->addItem("Petición de Login.");
 	*user = ui->leUser->text();
 	*pass = ui->lePass->text();
-}
-
-void MainWindow::onURLResolved()
-{
-	ui->lwResponses->addItem("URL Resolved");
 }
 
 void MainWindow::onCommError(const QString &error)
@@ -69,12 +131,4 @@ void MainWindow::onCommError(const QString &error)
 void MainWindow::onReceive(ROS::QSentence &s)
 {
 	ui->lwResponses->addItem(s.toString());
-}
-
-void MainWindow::onRouterListening()
-{
-	ROS::QSentence s("/interface/getall");
-	QString tag = mktAPI.sendSentence( s );
-	s.setTag(tag);
-
 }

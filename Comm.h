@@ -10,6 +10,7 @@
 
 namespace ROS
 {
+
 class Comm : public QObject
 {
     Q_OBJECT
@@ -21,18 +22,33 @@ class Comm : public QObject
 	QByteArray incomingWord;
 	QSentence incomingSentence;
 	bool sentenceCompleted;
+
+public:
+	enum CommState
+	{
+		Unconnected,
+		HostLookup,
+		Connecting,
+		Connected,
+		Closing
+	};
+
 	enum LoginState
 	{
 		NoLoged,
 		LoginRequested,
 		UserPassSended,
 		LogedIn
-	} m_loginState;
+	};
+
+private:
+	LoginState m_loginState;
 	int incomingWordSize;
 
 	void doLogin();
 	void tryLogin();
 	void sendUser();
+	void setLoginState(LoginState s);
 
 protected:
 	void writeLength(int wordLength);
@@ -43,18 +59,15 @@ protected:
 
 private slots:
 	void onError(QAbstractSocket::SocketError);
-	void onConnected();
-	void onDisconnected();
-	void onHostLookup();
 	void onReadyRead();
+	void onSocketStateChanges(QAbstractSocket::SocketState s);
 
 signals:
-    void comConnected(bool c);
 	void comError(const QString &error);
-    void addrFound();
     void loginRequest(QString *user, QString *pass);
 	void comReceive(ROS::QSentence &s);
-	void routerListening();
+	void comStateChanged(ROS::Comm::CommState s);
+	void loginStateChanged(ROS::Comm::LoginState s);
 
 public:
 	Comm(QObject *papi = NULL);
@@ -74,11 +87,13 @@ public:
 	 * @return true/false if we are correctly loged into ROS.
 	 */
 	inline bool isLoged() const { return isConnected() && (m_loginState == LogedIn); }
+	inline bool isClosing() const { return m_sock.state() == QAbstractSocket::ClosingState; }
+	inline bool isConnecting() const { return m_sock.state() == QAbstractSocket::ConnectingState; }
 
 public slots:
 	QString sendSentence(const ROS::QSentence &sent, bool addTag = true);
 	bool connectTo(const QString &addr, quint16 port);
-	void closeCom() { if(isConnected()) m_sock.close(); }
+	void closeCom(bool force = false);
 };
 }
 #endif // APICOM_H

@@ -62,15 +62,12 @@ public:
     ~MainWindow();
 
 private slots:
-	void on_pushButton_clicked();
-	void onConnected(bool succeful);
+	void on_pbConnect_clicked();
 	void onLoginRequest(QString *user, QString *pass);
-	void onURLResolved();
 	void onCommError(const QString &error);
 	void onReceive(ROS::QSentence &s);
-	void onRouterListening();
+	void onStateChanged(ROS::Comm::CommState s);
+	void onLoginChanged(ROS::Comm::LoginState s);
 };
-
-
 
 #endif // MAINWINDOW_H
