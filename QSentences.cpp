@@ -304,7 +304,7 @@ QString QSentence::resultString() const
 	case Done:	return "!done";
 	case Trap:	return "!trap";
 	case Fatal:	return "!fatal";
-	case Reply:	return "re";
+	case Reply:	return "!re";
 	default:	return "<error>";
 	}
 }
