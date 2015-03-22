@@ -1,5 +1,6 @@
 # Local user configurations
-*.pro.user
+*.pro.user*
+
 
 # Windows image file caches
 Thumbs.db
