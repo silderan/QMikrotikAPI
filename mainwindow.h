@@ -68,6 +68,7 @@ private slots:
 	void onReceive(ROS::QSentence &s);
 	void onStateChanged(ROS::Comm::CommState s);
 	void onLoginChanged(ROS::Comm::LoginState s);
+	void on_pbEnviar_clicked();
 };
 
 #endif // MAINWINDOW_H

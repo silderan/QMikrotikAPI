@@ -15,10 +15,10 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->sbPort->setValue(gGlobalConfig.getPort());
 	ui->leUser->setText(gGlobalConfig.getUserName());
 	ui->lePass->setText(gGlobalConfig.getUserPass());
+	ui->groupBox->setEnabled(false);
 
 	connect( &mktAPI, SIGNAL(comError(QString)), this, SLOT(onCommError(QString)) );
 	connect( &mktAPI, SIGNAL(loginRequest(QString*,QString*)), this, SLOT(onLoginRequest(QString*,QString*)) );
-	connect( &mktAPI, SIGNAL(routerListening()), this, SLOT(onRouterListening()) );
 
 	connect( &mktAPI, SIGNAL(comStateChanged(ROS::Comm::CommState)),
 			 this, SLOT(onStateChanged(ROS::Comm::CommState)) );
@@ -67,6 +67,7 @@ void MainWindow::on_pbConnect_clicked()
 
 void MainWindow::onStateChanged(ROS::Comm::CommState s)
 {
+	ui->groupBox->setEnabled(false);
 	switch( s )
 	{
 	case ROS::Comm::Unconnected:
@@ -98,24 +99,23 @@ void MainWindow::onLoginChanged(ROS::Comm::LoginState s)
 	{
 	case ROS::Comm::NoLoged:
 		ui->lwResponses->addItem( tr("No está identificado en el servidor") );
+		ui->groupBox->setEnabled(false);
 		break;
 	case ROS::Comm::LoginRequested:
 		ui->lwResponses->addItem( tr("Usuario y contraseña pedidos") );
+		ui->groupBox->setEnabled(false);
 		break;
 	case ROS::Comm::UserPassSended:
 		ui->lwResponses->addItem( tr("Petición de login en curso") );
+		ui->groupBox->setEnabled(false);
 		break;
 	case ROS::Comm::LogedIn:
 		ui->lwResponses->addItem( tr("Logado al servidor") );
 		ui->pbConnect->setText("Desconectar");
-
-		ROS::QSentence s("/interface/getall");
-		QString tag = mktAPI.sendSentence( s );
-		s.setTag(tag);
+		ui->groupBox->setEnabled(true);
 		break;
 	}
 }
-
 
 void MainWindow::onLoginRequest(QString *user, QString *pass)
 {
@@ -131,4 +131,13 @@ void MainWindow::onCommError(const QString &error)
 void MainWindow::onReceive(ROS::QSentence &s)
 {
 	ui->lwResponses->addItem(s.toString());
+}
+
+void MainWindow::on_pbEnviar_clicked()
+{
+	if( ui->leCommand->text().isEmpty() )
+		return;
+	ROS::QSentence s(ui->leCommand->text(), QString(),
+					 ui->leAttrib->text().split(','));
+	ui->lwResponses->addItem(QString("Sentencia enviada. Tag=%1").arg(mktAPI.sendSentence(s)));
 }

@@ -104,6 +104,7 @@ public:
 
 	inline void setResultType(Result r) { resultType = r; }
 	inline Result getResultType() const { return resultType; }
+	QString resultString() const;
 	QString toString() const;
 
 	void clear()

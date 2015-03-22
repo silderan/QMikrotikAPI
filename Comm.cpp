@@ -6,7 +6,7 @@ Comm::Comm(QObject *papi)
  : QObject(papi), m_loginState(NoLoged), incomingWordSize(-1)
 {
 	connect( &m_sock, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(onError(QAbstractSocket::SocketError)) );
-	connect( &m_sock, SIGNAL(readyRead()), this, SLOT(onReadyRead()) );
+	connect( &m_sock, SIGNAL(readyRead()), this, SLOT(readSentence()) );
 	connect( &m_sock, SIGNAL(stateChanged(QAbstractSocket::SocketState)),
 			 this, SLOT(onSocketStateChanges(QAbstractSocket::SocketState)) );
 }
@@ -110,8 +110,11 @@ int Comm::readWord()
 
 /**
  * @brief Comm::readSentence
- * Reads socket data to fill incommingSentence structure.
- * You can call this funcion when data is avaiable in socket.
+ * Slot called when data is ready to be read from socket connected to ROS.
+ * This function fills up an internal QSentence struct. Once QSentence is
+ * filled, at begining, this function is used to login. When login is done,
+ * this function emits "comReceive(QSentence)" to allow application to
+ * do his job with the sentence sended by ROS.
  */
 void Comm::readSentence()
 {
@@ -119,14 +122,21 @@ void Comm::readSentence()
 	{
 		if( incomingWord.isEmpty() )
 		{
-			sentenceCompleted = true;
-			return;
+			if( m_loginState != LogedIn )
+				doLogin();
+			else
+			{
+				emit comReceive(incomingSentence);
+				incomingSentence.clear();
+			}
 		}
-		incomingSentence.addWord(incomingWord);
-		incomingWord.clear();
-		incomingWordSize = -1;
+		else
+		{
+			incomingSentence.addWord(incomingWord);
+			incomingWord.clear();
+			incomingWordSize = -1;
+		}
 	}
-	sentenceCompleted = false;
 }
 
 /**
@@ -446,33 +456,7 @@ int Comm::readLength()
  */
 void ROS::Comm::onError(QAbstractSocket::SocketError /*err*/)
 {
-	if( m_sock.state() != QAbstractSocket::ConnectedState )
-		emit comStateChanged(Unconnected);
 	emit comError(m_sock.errorString());
-}
-
-/**
- * @brief Comm::onReadyRead
- * Slot called when data is ready to be read from socket connected to ROS.
- * This function fills up an internal QSentence struct. Once QSentence is
- * filled, at begining, this function is used to login. When login is done,
- * this function emits "comReceive(QSentence)" to allow application to
- * do his job with the sentence sended by ROS.
- */
-void Comm::onReadyRead()
-{
-	readSentence();
-	if( sentenceCompleted )
-	{
-		if( m_loginState != LogedIn )
-			doLogin();
-		else
-		{
-			emit comReceive(incomingSentence);
-			incomingSentence.clear();
-		}
-		sentenceCompleted = false;
-	}
 }
 
 /**

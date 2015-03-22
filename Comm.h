@@ -21,7 +21,6 @@ class Comm : public QObject
     QString m_Password;
 	QByteArray incomingWord;
 	QSentence incomingSentence;
-	bool sentenceCompleted;
 
 public:
 	enum CommState
@@ -55,11 +54,10 @@ protected:
     int readLength();
 	void sendWord(const QString &strWord);
 	int readWord();
-	void readSentence();
 
 private slots:
 	void onError(QAbstractSocket::SocketError);
-	void onReadyRead();
+	void readSentence();
 	void onSocketStateChanges(QAbstractSocket::SocketState s);
 
 signals:

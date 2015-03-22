@@ -281,7 +281,7 @@ void QQueries::addQueries(const QStringList &queries)
  */
 QString QSentence::toString() const
 {
-	QString rtn(m_cmd +
+	QString rtn(m_cmd + resultString() + " " +
 				attributes().toWords().join("") +
 				APIattributes().toWords().join("") +
 				queries().toWords().join(""));
@@ -289,6 +289,24 @@ QString QSentence::toString() const
 	if( m_tag.count() )
 		rtn.append(QString(".tag=%1").arg(m_tag));
 	return rtn;
+}
+
+/**
+ * @brief QSentence::resultString
+ * Returns the result printable string.
+ * @return the result printable string.
+ */
+QString QSentence::resultString() const
+{
+	switch( getResultType() )
+	{
+	case None:	return "";
+	case Done:	return "!done";
+	case Trap:	return "!trap";
+	case Fatal:	return "!fatal";
+	case Reply:	return "re";
+	default:	return "<error>";
+	}
 }
 
 /**
