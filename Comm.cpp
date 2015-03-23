@@ -238,7 +238,7 @@ void Comm::doLogin()
 		// put together the login sentence
 		sendWord("/login");
 		sendWord(QString("=name=%1").arg(m_Username));
-		sendWord(QString("=response=00%1").arg(QMD5::MyEncode(m_Password, incomingSentence.attributes().attribute("ret"))));
+		sendWord(QString("=response=00%1").arg(QMD5::encode(m_Password, incomingSentence.attributes().attribute("ret"))));
 		sendWord("");
 
 		incomingSentence.clear();
