@@ -467,4 +467,3 @@ void Comm::onSocketStateChanges(QAbstractSocket::SocketState s)
 		return;
 	}
 }
-//682456650 (Martin scraze)
