@@ -120,6 +120,8 @@ void Comm::readSentence()
 {
 	while( readWord() >= 0 )
 	{
+		if( m_sock.state() != QAbstractSocket::ConnectedState )
+			break;
 		if( incomingWord.isEmpty() )
 		{
 			if( m_loginState != LogedIn )
@@ -235,6 +237,7 @@ void Comm::doLogin()
 			break;
 		}
 
+		emit loginRequest(&m_Username, &m_Password);
 		// put together the login sentence
 		sendWord("/login");
 		sendWord(QString("=name=%1").arg(m_Username));
@@ -363,7 +366,7 @@ int Comm::readLength()
 
 	lengthData = (char *) calloc(sizeof(int), 1);
 
-	if( !m_sock.read( &firstChar, 1 ) )
+	if( m_sock.read( &firstChar, 1 ) != 1 )
 		return -1;
 
 	// read 4 bytes
@@ -373,15 +376,15 @@ int Comm::readLength()
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		lengthData[3] = firstChar;
 		lengthData[3] &= 0x1f;        // mask out the 1st 3 bits
-		if( !m_sock.read( &lengthData[2], 1 ) ) return -2;
-		if( !m_sock.read( &lengthData[1], 1 ) ) return -3;
-		if( !m_sock.read( &lengthData[0], 1 ) ) return -4;
+		if( m_sock.read(lengthData+2, 1) != 1 ) return -2;
+		if( m_sock.read(lengthData+1, 1) != 1 ) return -3;
+		if( m_sock.read(lengthData, 1) != 1 ) return -4;
 #else
 		lengthData[0] = firstChar;
 		lengthData[0] &= 0x1f;        // mask out the 1st 3 bits
-		if( !m_sock.read( &lengthData[1], 1 ) ) return -2;
-		if( !m_sock.read( &lengthData[2], 1 ) ) return -3;
-		if( !m_sock.read( &lengthData[3], 1 ) ) return -4;
+		if( m_sock.read(lengthData+1, 1) != 1 ) return -2;
+		if( m_sock.read(lengthData+2, 1) != 1 ) return -3;
+		if( m_sock.read(lengthData+3, 1) != 1 ) return -4;
 #endif
 		messageLength = (int *)lengthData;
 	}
@@ -391,13 +394,13 @@ int Comm::readLength()
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		lengthData[2] = firstChar;
 		lengthData[2] &= 0x3f;        // mask out the 1st 2 bits
-		if( !m_sock.read( &lengthData[1], 1 ) ) return -2;
-		if( !m_sock.read( &lengthData[0], 1 ) ) return -3;
+		if( m_sock.read(lengthData+1, 1) != 1 ) return -2;
+		if( m_sock.read(lengthData+0, 1) != 1 ) return -3;
 #else
 		lengthData[1] = firstChar;
 		lengthData[1] &= 0x3f;        // mask out the 1st 2 bits
-		if( !m_sock.read( &lengthData[2], 1 ) ) return -2;
-		if( !m_sock.read( &lengthData[3], 1 ) ) return -3;
+		if( m_sock.read(lengthData+2, 1) != 1 ) return -2;
+		if( m_sock.read(lengthData+3, 1) != 1 ) return -3;
 #endif
 		messageLength = (int *)lengthData;
 	}
@@ -407,11 +410,11 @@ int Comm::readLength()
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
 		lengthData[1] = firstChar;
 		lengthData[1] &= 0x7f;        // mask out the 1st bit
-		if( !m_sock.read( &lengthData[0], 1 ) ) return -2;
+		if( m_sock.read(lengthData+0, 1) != 1 ) return -2;
 #else
 		lengthData[2] = firstChar;
 		lengthData[2] &= 0x7f;        // mask out the 1st bit
-		if( !m_sock.read( &lengthData[3], 1 ) ) return -2;
+		if( m_sock.read(lengthData+3, 1) != 1 ) return -2;
 #endif
 		messageLength = (int *)lengthData;
 	}
@@ -462,12 +465,11 @@ void Comm::onSocketStateChanges(QAbstractSocket::SocketState s)
 		emit comStateChanged(Connected);
 
 		setLoginState(NoLoged);
-		emit loginRequest(&m_Username, &m_Password);
 
-		setLoginState(LoginRequested);
 		incomingSentence.clear();
 		//Send login message
 		sendSentence( QSentence("/login"), false );
+		setLoginState(LoginRequested);
 
 		return;
 	case QAbstractSocket::BoundState: // Este estado sólo se da en caso de ser un servidor.
