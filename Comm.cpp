@@ -361,74 +361,60 @@ void Comm::writeLength(int wordLength)
 int Comm::readLength()
 {
 	char firstChar;			// first character read from socket
-	char *lengthData;		// length of next message to read...will be cast to int at the end
+	char lengthData[4];		// length of next message to read...will be cast to int at the end
 	int *messageLength;		// calculated length of next message (Cast to int)
 
-	lengthData = (char *) calloc(sizeof(int), 1);
-
-	if( m_sock.read( &firstChar, 1 ) != 1 )
+	if( m_sock.read(&firstChar, 1) != 1 )
 		return -1;
 
-	// read 4 bytes
-	// this code SHOULD work, but is untested...
+	messageLength = (int *)lengthData;
+
+	// 4 bytes.
 	if( (firstChar & 0xE0) == 0xE0 )
 	{
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
-		lengthData[3] = firstChar;
-		lengthData[3] &= 0x1f;        // mask out the 1st 3 bits
+		lengthData[3] = firstChar & ~0xE0;
 		if( m_sock.read(lengthData+2, 1) != 1 ) return -2;
 		if( m_sock.read(lengthData+1, 1) != 1 ) return -3;
 		if( m_sock.read(lengthData, 1) != 1 ) return -4;
 #else
-		lengthData[0] = firstChar;
-		lengthData[0] &= 0x1f;        // mask out the 1st 3 bits
+		lengthData[0] = firstChar & ~0xE0;
 		if( m_sock.read(lengthData+1, 1) != 1 ) return -2;
 		if( m_sock.read(lengthData+2, 1) != 1 ) return -3;
 		if( m_sock.read(lengthData+3, 1) != 1 ) return -4;
 #endif
-		messageLength = (int *)lengthData;
 	}
 	else
-	if( (firstChar & 0xC0) == 0xC0 ) // read 3 bytes
+	// 3 bytes.
+	if( (firstChar & 0xC0) == 0xC0 )
 	{
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
-		lengthData[2] = firstChar;
-		lengthData[2] &= 0x3f;        // mask out the 1st 2 bits
+		lengthData[2] = firstChar & ~0xC0;
 		if( m_sock.read(lengthData+1, 1) != 1 ) return -2;
 		if( m_sock.read(lengthData+0, 1) != 1 ) return -3;
 #else
-		lengthData[1] = firstChar;
-		lengthData[1] &= 0x3f;        // mask out the 1st 2 bits
+		lengthData[1] = firstChar & ~0xC0;
 		if( m_sock.read(lengthData+2, 1) != 1 ) return -2;
 		if( m_sock.read(lengthData+3, 1) != 1 ) return -3;
 #endif
-		messageLength = (int *)lengthData;
 	}
 	else
-	if( (firstChar & 0x80) == 0x80) // read 2 bytes
+	// 2 bytes.
+	if( (firstChar & 0x80) == 0x80)
 	{
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
-		lengthData[1] = firstChar;
-		lengthData[1] &= 0x7f;        // mask out the 1st bit
+		lengthData[1] = firstChar & ~0x80;
 		if( m_sock.read(lengthData+0, 1) != 1 ) return -2;
 #else
-		lengthData[2] = firstChar;
-		lengthData[2] &= 0x7f;        // mask out the 1st bit
+		lengthData[2] = firstChar & ~0x80;
 		if( m_sock.read(lengthData+3, 1) != 1 ) return -2;
 #endif
-		messageLength = (int *)lengthData;
 	}
-	else // assume 1-byte encoded length...same on both LE and BE systems
-	{
-		messageLength = (int *) malloc(sizeof(int));
-		*messageLength = (int)firstChar;
-	}
+	else
+	// 1 byte.
+		return (int)firstChar;
 
-	int retMessageLength = *messageLength;
-	delete messageLength;
-	delete [] lengthData;
-
-	return retMessageLength;
+	return *messageLength;
 }
 
 /**
@@ -481,3 +467,4 @@ void Comm::onSocketStateChanges(QAbstractSocket::SocketState s)
 		return;
 	}
 }
+//682456650 (Martin scraze)
