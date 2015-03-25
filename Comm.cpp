@@ -2,6 +2,8 @@
 
 using namespace ROS;
 
+#include <QMessageBox>
+
 Comm::Comm(QObject *papi)
  : QObject(papi), m_loginState(NoLoged), incomingWordSize(-1)
 {
@@ -14,6 +16,21 @@ Comm::Comm(QObject *papi)
 Comm::~Comm()
 {
 	m_sock.close();
+}
+
+void Comm::resetWord()
+{
+	incomingWord.clear();
+	incomingWordSize = -1;
+	incomingWordPos = 0;
+	incomingWordCount = -1;
+	(*(int*)wordCountBuf) = 0;
+}
+
+void Comm::resetSentence()
+{
+	resetWord();
+	incomingSentence.clear();
 }
 
 /**
@@ -64,6 +81,54 @@ void Comm::sendWord(const QString &word)
 	m_sock.write( word.toLatin1() );
 }
 
+int Comm::receiveWordCount()
+{
+	char c;
+	int i = m_sock.read(&c, 1);
+	if( i <= 0 )
+		return i;
+
+	if( incomingWordPos == 0 )
+	{
+		if( (c & 0xE0) == 0xE0 )
+		{
+			incomingWordSize = 4;
+			c &= ~0xE0;
+		}
+		else
+		if( (c & 0xC0) == 0xC0 )
+		{
+			incomingWordSize = 3;
+			c &= ~0xC0;
+		}
+		else
+		if( (c & 0x80) == 0x80 )
+		{
+			incomingWordSize = 2;
+			c &= ~0x80;
+		}
+		else
+			incomingWordSize = 1;
+	}
+	wordCountBuf[incomingWordPos] = c;
+	if( incomingWordSize == ++incomingWordPos )
+	{
+#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+		((char*)&incomingWordCount)[0] = wordCountBuf[0];
+		((char*)&incomingWordCount)[1] = wordCountBuf[1];
+		((char*)&incomingWordCount)[2] = wordCountBuf[2];
+		((char*)&incomingWordCount)[3] = wordCountBuf[3];
+#else
+		((char*)&incomingWordCount)[0] = wordCountBuf[3];
+		((char*)&incomingWordCount)[1] = wordCountBuf[2];
+		((char*)&incomingWordCount)[2] = wordCountBuf[1];
+		((char*)&incomingWordCount)[3] = wordCountBuf[0];
+#endif
+		return 1;
+	}
+	return 0;
+}
+
 /**
  * @brief Comm::readWord
  * Reads a word from ROS socket.
@@ -82,7 +147,13 @@ void Comm::sendWord(const QString &word)
  */
 int Comm::readWord()
 {
-	if( incomingWordSize <= 0 )
+	if( incomingWordCount == -1 )
+	{
+		int i = receiveWordCount();
+		if( i <= 0 )
+			return i;
+	}
+/*	if( incomingWordSize <= 0 )
 		switch( incomingWordSize = readLength() )
 		{
 		// Negative values means comm interrupted when reading length.
@@ -97,7 +168,7 @@ int Comm::readWord()
 			incomingWord.clear();
 			return 0;
 		}
-
+*/
 	QByteArray tmp = m_sock.read(incomingWordSize);
 	if( tmp.count() )
 	{
@@ -118,6 +189,8 @@ int Comm::readWord()
  */
 void Comm::readSentence()
 {
+	try
+	{
 	while( readWord() >= 0 )
 	{
 		if( m_sock.state() != QAbstractSocket::ConnectedState )
@@ -129,15 +202,20 @@ void Comm::readSentence()
 			else
 			{
 				emit comReceive(incomingSentence);
-				incomingSentence.clear();
+				resetSentence();
 			}
 		}
 		else
 		{
 			incomingSentence.addWord(incomingWord);
-			incomingWord.clear();
-			incomingWordSize = -1;
+			resetWord();
 		}
+	}
+	}
+	catch( const char *err )
+	{
+		QMessageBox::warning(NULL, tr("reading sentence"), tr("Error reading data from socket: %1").arg(err));
+		closeCom(true);
 	}
 }
 
@@ -187,6 +265,7 @@ void Comm::closeCom(bool force)
 		else
 			m_sock.disconnectFromHost();
 	}
+	resetSentence();
 }
 /**
  * @brief Comm::doLogin
@@ -209,31 +288,28 @@ void Comm::doLogin()
 		{
 			emit comError(tr("Cannot login"));
 			setLoginState(NoLoged);
-			m_sock.close();
+			closeCom();
 			break;
 		}
 		if( incomingSentence.attributes().count() != 1 )
 		{
 			emit comError(tr("Unknown remote login sentence format: didn't receive anything"));
 			setLoginState(NoLoged);
-			incomingSentence.clear();
-			m_sock.close();
+			closeCom();
 			break;
 		}
 		if( !incomingSentence.attributes().attribute("ret").count() )
 		{
 			emit comError(tr("Unknown remote login sentence format: Doesn't receive 'ret' namefield"));
 			setLoginState(NoLoged);
-			incomingSentence.clear();
-			m_sock.close();
+			closeCom();
 			break;
 		}
 		if( incomingSentence.attributes().attribute("ret").count() != 32 )
 		{
 			emit comError(tr("Unknown remote login sentence format: 'ret' field doesn't contains 32 characters"));
 			setLoginState(NoLoged);
-			incomingSentence.clear();
-			m_sock.close();
+			closeCom();
 			break;
 		}
 
@@ -244,26 +320,22 @@ void Comm::doLogin()
 		sendWord(QString("=response=00%1").arg(QMD5::encode(m_Password, incomingSentence.attributes().attribute("ret"))));
 		sendWord("");
 
-		incomingSentence.clear();
-		incomingWordSize = -1;
+		resetSentence();
 		setLoginState(UserPassSended);
 		break;
 	}
 	case UserPassSended:
 		if( incomingSentence.getResultType() == QSentence::Done )
 		{
-			incomingWordSize = -1;
-			incomingSentence.clear();
+			resetSentence();
 			setLoginState(LogedIn);
 		}
 		else
 		{
-			setLoginState(NoLoged);
 			emit comError(tr("Invalid Username or Password"));
 			emit comError(tr("remote msg: %1").arg(incomingSentence.attributes().attribute("message")));
-			incomingWordSize = -1;
-			incomingSentence.clear();
-			m_sock.close();
+			setLoginState(NoLoged);
+			resetSentence();
 		}
 		break;
 	case LogedIn:
@@ -449,14 +521,10 @@ void Comm::onSocketStateChanges(QAbstractSocket::SocketState s)
 		return;
 	case QAbstractSocket::ConnectedState:
 		emit comStateChanged(Connected);
-
 		setLoginState(NoLoged);
-
-		incomingSentence.clear();
-		//Send login message
+		resetSentence();
 		sendSentence( QSentence("/login"), false );
 		setLoginState(LoginRequested);
-
 		return;
 	case QAbstractSocket::BoundState: // Este estado sólo se da en caso de ser un servidor.
 		return;
