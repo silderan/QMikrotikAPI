@@ -14,13 +14,6 @@ namespace ROS
 class Comm : public QObject
 {
     Q_OBJECT
-    QTcpSocket m_sock;
-    QString m_addr;
-    quint16 m_port;
-    QString m_Username;
-    QString m_Password;
-	QByteArray incomingWord;
-	QSentence incomingSentence;
 
 public:
 	enum CommState
@@ -41,16 +34,30 @@ public:
 	};
 
 private:
+	QTcpSocket m_sock;
+	QString m_addr;
+	quint16 m_port;
+	QString m_Username;
+	QString m_Password;
+	QByteArray incomingWord;
+	QSentence incomingSentence;
 	LoginState m_loginState;
 	int incomingWordSize;
+	int incomingWordCount;
+	int incomingWordPos;
+	int wordCount;
+	char wordCountBuf[4];
 
 	void doLogin();
 	void tryLogin();
 	void sendUser();
 	void setLoginState(LoginState s);
+	void resetWord();
+	void resetSentence();
 
 protected:
 	void writeLength(int wordLength);
+	int receiveWordCount();
     int readLength();
 	void sendWord(const QString &strWord);
 	int readWord();

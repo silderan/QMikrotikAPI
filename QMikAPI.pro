@@ -28,4 +28,5 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui
 
 DISTFILES += \
-    README.md
+    README.md \
+    FailComm.txt
