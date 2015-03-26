@@ -60,7 +60,7 @@ protected:
 	int receiveWordCount();
     int readLength();
 	void sendWord(const QString &strWord);
-	int readWord();
+	int receiveWord();
 
 private slots:
 	void onError(QAbstractSocket::SocketError);
@@ -96,7 +96,7 @@ public:
 	inline bool isConnecting() const { return m_sock.state() == QAbstractSocket::ConnectingState; }
 
 public slots:
-	QString sendSentence(const ROS::QSentence &sent, bool addTag = true);
+	QString sendSentence(const ROS::QSentence &sent, bool sendTag = true);
 	bool connectTo(const QString &addr, quint16 port);
 	void closeCom(bool force = false);
 };

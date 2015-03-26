@@ -39,11 +39,11 @@ void Comm::resetSentence()
  * If there is no tag provided in sentence info, a unique one
  * is created to send to and returned.
  * @param sent Sentence class with the info to sent to Router.
- * @param addTag (Optional, default==true) Tells function to use (or,
+ * @param sendTag (Optional, default==true) Tells function to use (or,
  * eventually create and use) a tag for sentence to sent.
  * @return tag used for sentence.
  */
-QString Comm::sendSentence(const QSentence &sent, bool addTag)
+QString Comm::sendSentence(const QSentence &sent, bool sendTag)
 {
 	static int ID = 0;
 	QString word;
@@ -56,7 +56,7 @@ QString Comm::sendSentence(const QSentence &sent, bool addTag)
 	foreach( word, sent.queries().toWords() )
 		sendWord(word);
 
-	if( addTag )
+	if( sendTag )
 	{
 		word = sent.tag();
 		if( word.isEmpty() )
@@ -145,38 +145,19 @@ int Comm::receiveWordCount()
  * 0: Empty word readed.
  * 1: Word readed.
  */
-int Comm::readWord()
+int Comm::receiveWord()
 {
-	if( incomingWordCount == -1 )
+	int remain = incomingWordCount-incomingWord.count();
+	if( remain )
 	{
-		int i = receiveWordCount();
-		if( i <= 0 )
-			return i;
-	}
-/*	if( incomingWordSize <= 0 )
-		switch( incomingWordSize = readLength() )
+		QByteArray tmp = m_sock.read(remain);
+		if( tmp.count() )
 		{
-		// Negative values means comm interrupted when reading length.
-		case -1:// Nothing readed. No problem. Will be readed later.
-			return -1;
-		case -2:// Cannot read 2nd byte (TODO: Handle it)
-		case -3:// Cannot read 3rd byte (TODO: Handle it)
-		case -4:// Cannot read 4th byte (TODO: Handle it)
-			throw "Incomplete word length arrived.";
-		case 0:
-			// Empty word readed.
-			incomingWord.clear();
-			return 0;
+			incomingWord.append(tmp);
+			return tmp.count();
 		}
-*/
-	QByteArray tmp = m_sock.read(incomingWordSize);
-	if( tmp.count() )
-	{
-		incomingWordSize -= tmp.count();
-		incomingWord.append(tmp);
 	}
-	// If all word is readed, returns 1. Otherwise, -1 is returned.
-	return incomingWordSize == 0 ? 1 : -1;
+	return 0;
 }
 
 /**
@@ -191,26 +172,37 @@ void Comm::readSentence()
 {
 	try
 	{
-	while( readWord() >= 0 )
-	{
-		if( m_sock.state() != QAbstractSocket::ConnectedState )
-			break;
-		if( incomingWord.isEmpty() )
+		while( m_sock.state() == QAbstractSocket::ConnectedState )
 		{
-			if( m_loginState != LogedIn )
-				doLogin();
-			else
+			if( incomingWordCount == -1 )
 			{
-				emit comReceive(incomingSentence);
-				resetSentence();
+				if( receiveWordCount() <= 0 )
+					break;
+			}
+			if( incomingWordCount > incomingWord.count() )
+			{
+				if( receiveWord() <= 0 )
+					break;
+			}
+			if( incomingWordCount == incomingWord.count() )
+			{
+				if( incomingWordCount == 0 )
+				{
+					if( m_loginState != LogedIn )
+						doLogin();
+					else
+					{
+						emit comReceive(incomingSentence);
+						resetSentence();
+					}
+				}
+				else
+				{
+					incomingSentence.addWord(incomingWord);
+					resetWord();
+				}
 			}
 		}
-		else
-		{
-			incomingSentence.addWord(incomingWord);
-			resetWord();
-		}
-	}
 	}
 	catch( const char *err )
 	{
