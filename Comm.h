@@ -56,11 +56,11 @@ private:
 	void resetSentence();
 
 protected:
-	void writeLength(int wordLength);
 	int receiveWordCount();
-    int readLength();
-	void sendWord(const QString &strWord);
 	int receiveWord();
+
+	void writeLength(int wordLength);
+	void sendWord(const QString &strWord);
 
 private slots:
 	void onError(QAbstractSocket::SocketError);
@@ -97,7 +97,7 @@ public:
 
 public slots:
 	QString sendSentence(const ROS::QSentence &sent, bool sendTag = true);
-	bool connectTo(const QString &addr, quint16 port);
+	void connectTo(const QString &addr, quint16 port);
 	void closeCom(bool force = false);
 };
 }

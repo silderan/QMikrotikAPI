@@ -214,23 +214,16 @@ void Comm::readSentence()
 /**
  * @brief ROS::Comm::connectTo
  * Starts connection to ROS at the addres addr and port.
- * If cannot starts connection, emits a comError signal
+ * If cannot starts connection, emits a comError signal.
  * @param addr The addres where the ROS is. Can be a URL.
  * @param port The port where the ROS API is listening.
- * @return true if connection is started or false if not
- * Currently, false is returned in case that the socket is
- * not at UnconnectedState
  */
-bool ROS::Comm::connectTo(const QString &addr, quint16 port)
+void ROS::Comm::connectTo(const QString &addr, quint16 port)
 {
 	if( QAbstractSocket::UnconnectedState != m_sock.state() )
-	{
-		emit comError(tr("Trying to connect a allready opened socket"));
-		return false;
-	}
-
-	m_sock.connectToHost(m_addr = addr, m_port = port);
-	return true;
+		emit comError(tr("Trying to connect using a already opened socket"));
+	else
+		m_sock.connectToHost(m_addr = addr, m_port = port);
 }
 
 /**
@@ -413,72 +406,6 @@ void Comm::writeLength(int wordLength)
 		printf("Word is too long.\n");
 		throw "Word too long";
 	}
-}
-
-/**
- * @brief Comm::readLength
- * Reads a word length from socket.
- * @return the length readed.
- * @todo Esta función tiene un par de fallos en la
- * asignación de memoria y se podría simplificar sin usar nada de ella.
- */
-int Comm::readLength()
-{
-	char firstChar;			// first character read from socket
-	char lengthData[4];		// length of next message to read...will be cast to int at the end
-	int *messageLength;		// calculated length of next message (Cast to int)
-
-	if( m_sock.read(&firstChar, 1) != 1 )
-		return -1;
-
-	messageLength = (int *)lengthData;
-
-	// 4 bytes.
-	if( (firstChar & 0xE0) == 0xE0 )
-	{
-#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
-		lengthData[3] = firstChar & ~0xE0;
-		if( m_sock.read(lengthData+2, 1) != 1 ) return -2;
-		if( m_sock.read(lengthData+1, 1) != 1 ) return -3;
-		if( m_sock.read(lengthData, 1) != 1 ) return -4;
-#else
-		lengthData[0] = firstChar & ~0xE0;
-		if( m_sock.read(lengthData+1, 1) != 1 ) return -2;
-		if( m_sock.read(lengthData+2, 1) != 1 ) return -3;
-		if( m_sock.read(lengthData+3, 1) != 1 ) return -4;
-#endif
-	}
-	else
-	// 3 bytes.
-	if( (firstChar & 0xC0) == 0xC0 )
-	{
-#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
-		lengthData[2] = firstChar & ~0xC0;
-		if( m_sock.read(lengthData+1, 1) != 1 ) return -2;
-		if( m_sock.read(lengthData+0, 1) != 1 ) return -3;
-#else
-		lengthData[1] = firstChar & ~0xC0;
-		if( m_sock.read(lengthData+2, 1) != 1 ) return -2;
-		if( m_sock.read(lengthData+3, 1) != 1 ) return -3;
-#endif
-	}
-	else
-	// 2 bytes.
-	if( (firstChar & 0x80) == 0x80)
-	{
-#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
-		lengthData[1] = firstChar & ~0x80;
-		if( m_sock.read(lengthData+0, 1) != 1 ) return -2;
-#else
-		lengthData[2] = firstChar & ~0x80;
-		if( m_sock.read(lengthData+3, 1) != 1 ) return -2;
-#endif
-	}
-	else
-	// 1 byte.
-		return (int)firstChar;
-
-	return *messageLength;
 }
 
 /**

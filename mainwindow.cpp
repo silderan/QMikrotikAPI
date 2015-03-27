@@ -60,8 +60,7 @@ void MainWindow::on_pbConnect_clicked()
 		mktAPI.closeCom();
 	}
 	else
-	if( mktAPI.connectTo(ui->leIP->text(), (unsigned short)ui->sbPort->value()) )
-		ui->pbConnect->setText("Cancelar");
+		mktAPI.connectTo(ui->leIP->text(), (unsigned short)ui->sbPort->value());
 }
 
 
