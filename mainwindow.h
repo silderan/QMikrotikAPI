@@ -77,6 +77,7 @@ class MainWindow : public QMainWindow
 	Ui::MainWindow *ui;
 	ROS::Comm mktAPI;
 
+	void addLogText(const QString &txt);
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();

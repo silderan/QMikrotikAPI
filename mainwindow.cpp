@@ -62,6 +62,15 @@ MainWindow::~MainWindow()
 	ui = 0;
 }
 
+void MainWindow::addLogText(const QString &txt)
+{
+	if( ui )
+	{
+		ui->lwResponses->addItem(txt);
+		ui->lwResponses->scrollToBottom();
+	}
+}
+
 void MainWindow::on_pbConnect_clicked()
 {
 	if( mktAPI.isClosing() )
@@ -84,23 +93,23 @@ void MainWindow::onStateChanged(ROS::Comm::CommState s)
 	{
 	case ROS::Comm::Unconnected:
 		ui->pbConnect->setText( tr("Conectar") );
-		ui->lwResponses->addItem( tr("Desconectado") );
+		addLogText( tr("Desconectado") );
 		break;
 	case ROS::Comm::HostLookup:
 		ui->pbConnect->setText( tr("Cancelar") ) ;
-		ui->lwResponses->addItem( tr("Resolviendo URL") );
+		addLogText( tr("Resolviendo URL") );
 		break;
 	case ROS::Comm::Connecting:
 		ui->pbConnect->setText( tr("Cancelar") );
-		ui->lwResponses->addItem( tr("Conectando al servidor") );
+		addLogText( tr("Conectando al servidor") );
 		break;
 	case ROS::Comm::Connected:
 		ui->pbConnect->setText( tr("Desconectar") );
-		ui->lwResponses->addItem( tr("Conectado") );
+		addLogText( tr("Conectado") );
 		break;
 	case ROS::Comm::Closing:
 		ui->pbConnect->setText( tr("Forzar desconexión") );
-		ui->lwResponses->addItem( tr("Cerrando conexión") );
+		addLogText( tr("Cerrando conexión") );
 		break;
 	}
 }
@@ -110,19 +119,19 @@ void MainWindow::onLoginChanged(ROS::Comm::LoginState s)
 	switch( s )
 	{
 	case ROS::Comm::NoLoged:
-		ui->lwResponses->addItem( tr("No está identificado en el servidor") );
+		addLogText( tr("No está identificado en el servidor") );
 		ui->groupBox->setEnabled(false);
 		break;
 	case ROS::Comm::LoginRequested:
-		ui->lwResponses->addItem( tr("Usuario y contraseña pedidos") );
+		addLogText( tr("Usuario y contraseña pedidos") );
 		ui->groupBox->setEnabled(false);
 		break;
 	case ROS::Comm::UserPassSended:
-		ui->lwResponses->addItem( tr("Petición de login en curso") );
+		addLogText( tr("Petición de login en curso") );
 		ui->groupBox->setEnabled(false);
 		break;
 	case ROS::Comm::LogedIn:
-		ui->lwResponses->addItem( tr("Logado al servidor") );
+		addLogText( tr("Logado al servidor") );
 		ui->pbConnect->setText("Desconectar");
 		ui->groupBox->setEnabled(true);
 		break;
@@ -137,12 +146,12 @@ void MainWindow::onLoginRequest(QString *user, QString *pass)
 
 void MainWindow::onComError(ROS::Comm::CommError, QAbstractSocket::SocketError)
 {
-	ui->lwResponses->addItem(mktAPI.errorString());
+	addLogText(mktAPI.errorString());
 }
 
 void MainWindow::onReceive(ROS::QSentence &s)
 {
-	ui->lwResponses->addItem(s.toString());
+	addLogText(s.toString());
 }
 
 void MainWindow::on_pbEnviar_clicked()
@@ -151,5 +160,5 @@ void MainWindow::on_pbEnviar_clicked()
 		return;
 	ROS::QSentence s(ui->leCommand->text(), QString(),
 					 ui->leAttrib->text().split(','));
-	ui->lwResponses->addItem(QString("Sentencia enviada. Tag=%1").arg(mktAPI.sendSentence(s)));
+	addLogText(QString("Sentencia enviada. Tag=%1").arg(mktAPI.sendSentence(s)));
 }
