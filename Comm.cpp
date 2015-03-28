@@ -38,6 +38,14 @@ Comm::~Comm()
 	m_sock.close();
 }
 
+/**
+ * @brief Comm::errorString
+ * Returns a human-readable string descriving the last error
+ * ocurred on communication.
+ * This error can be a standard socket error (provided by QAbstractSocket)
+ * or a custom one.
+ * @return A human-readable string descriving the last error.
+ */
 QString Comm::errorString()
 {
 	switch( lastCommError )

@@ -127,15 +127,26 @@ public:
 	 * @return true/false if we are correctly loged into ROS.
 	 */
 	inline bool isLoged() const { return isConnected() && (m_loginState == LogedIn); }
+	/**
+	 * @brief isClosing
+	 * Checks if socket is en "closing" state.
+	 * This state happens when a "gracefull" closeCom(false) function is called.
+	 * @return true if socket is closing.
+	 */
 	inline bool isClosing() const { return m_sock.state() == QAbstractSocket::ClosingState; }
+	/**
+	 * @brief isConnecting
+	 * Checks if socket is in "connecting" state.
+	 * This state happens at handshake between this client and server.
+	 * @return
+	 */
 	inline bool isConnecting() const { return m_sock.state() == QAbstractSocket::ConnectingState; }
 
 	QString errorString();
-
-public slots:
 	QString sendSentence(const ROS::QSentence &sent, bool sendTag = true);
 	QString sendSentence(const QString &cmd, bool sendTag = true, const QStringList &attrib = QStringList());
 
+public slots:
 	void connectTo(const QString &addr, quint16 port);
 	void closeCom(bool force = false);
 };
