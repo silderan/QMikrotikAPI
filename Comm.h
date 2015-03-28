@@ -1,3 +1,23 @@
+/*
+	Copyright 2015 Rafael Dellà Bort. silderan (at) gmail (dot) com
+
+	This file is part of QMikAPI.
+
+	QMikAPI is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Lesser General Public License as
+	published by the Free Software Foundation, either version 3 of
+	the License, or (at your option) any later version.
+
+	QMikAPI is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	and GNU Lesser General Public License. along with QMikAPI.  If not,
+	see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef APICOM_H
 #define APICOM_H
 
@@ -32,6 +52,19 @@ public:
 		UserPassSended,
 		LogedIn
 	};
+	enum CommError
+	{
+		NoCommError,
+		SocketError,
+		LoginRefused,
+		LogingSentenceEmpty,
+		LogingSentenceNoRet,
+		LogingSentenceRet32,
+		LogingBadUsername,
+		WordReceivedTooLong,
+		WordToSendTooLong,
+		ControlByteReceived
+	};
 
 private:
 	QTcpSocket m_sock;
@@ -47,6 +80,7 @@ private:
 	int incomingWordPos;
 	int wordCount;
 	char wordCountBuf[4];
+	CommError lastCommError;
 
 	void doLogin();
 	void tryLogin();
@@ -55,20 +89,21 @@ private:
 	void resetWord();
 	void resetSentence();
 
-protected:
 	int receiveWordCount();
 	int receiveWord();
 
-	void writeLength(int wordLength);
+	void sendWordCount(int wordCount);
 	void sendWord(const QString &strWord);
 
+	void setComError(CommError ce);
+
 private slots:
-	void onError(QAbstractSocket::SocketError);
-	void readSentence();
+	void onSocketError(QAbstractSocket::SocketError err);
+	void receiveSentence();
 	void onSocketStateChanges(QAbstractSocket::SocketState s);
 
 signals:
-	void comError(const QString &error);
+	void comError(ROS::Comm::CommError ce, QAbstractSocket::SocketError se);
     void loginRequest(QString *user, QString *pass);
 	void comReceive(ROS::QSentence &s);
 	void comStateChanged(ROS::Comm::CommState s);
@@ -95,8 +130,12 @@ public:
 	inline bool isClosing() const { return m_sock.state() == QAbstractSocket::ClosingState; }
 	inline bool isConnecting() const { return m_sock.state() == QAbstractSocket::ConnectingState; }
 
+	QString errorString();
+
 public slots:
 	QString sendSentence(const ROS::QSentence &sent, bool sendTag = true);
+	QString sendSentence(const QString &cmd, bool sendTag = true, const QStringList &attrib = QStringList());
+
 	void connectTo(const QString &addr, quint16 port);
 	void closeCom(bool force = false);
 };

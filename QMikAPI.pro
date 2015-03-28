@@ -29,4 +29,5 @@ FORMS    += mainwindow.ui
 
 DISTFILES += \
     README.md \
-    FailComm.txt
+    COPYING.LESSER \
+    COPYING
