@@ -59,27 +59,19 @@ MainWindow::~MainWindow()
 	gGlobalConfig.setUserPass(ui->lePass->text());
 	gGlobalConfig.save();
     delete ui;
+	ui = 0;
 }
 
 void MainWindow::on_pbConnect_clicked()
 {
 	if( mktAPI.isClosing() )
-	{
-		ui->pbConnect->setText("Forzando cierre");
 		mktAPI.closeCom(true);
-	}
 	else
 	if( mktAPI.isLoged() )
-	{
-		ui->pbConnect->setText("Cerrando conexión");
 		mktAPI.closeCom();
-	}
 	else
 	if( mktAPI.isConnected() || mktAPI.isConnecting() )
-	{
-		ui->pbConnect->setText("Cerrando conexión");
 		mktAPI.closeCom();
-	}
 	else
 		mktAPI.connectTo(ui->leIP->text(), (unsigned short)ui->sbPort->value());
 }

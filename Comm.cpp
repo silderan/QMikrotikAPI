@@ -349,13 +349,12 @@ void ROS::Comm::connectTo(const QString &addr, quint16 port)
  */
 void Comm::closeCom(bool force)
 {
-	if( isConnected() )
+	if( isConnected() || isConnecting() )
 	{
-		if( force )
+		if( force || isConnecting() )
 		{
 			m_sock.abort();
 			m_sock.close();
-			emit comStateChanged(Unconnected);
 		}
 		else
 			m_sock.disconnectFromHost();
