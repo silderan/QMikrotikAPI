@@ -374,6 +374,7 @@ void Comm::doLogin()
 	switch( m_loginState )
 	{
 	case NoLoged:
+		resetSentence();
 		break;
 	case LoginRequested:
 	{
@@ -420,8 +421,7 @@ void Comm::doLogin()
 		else
 		{
 			setComError( LogingBadUsername );
-			setLoginState(NoLoged);
-			resetSentence();
+			closeCom();
 		}
 		break;
 #ifdef QT_DEBUG
@@ -515,6 +515,7 @@ void Comm::onSocketStateChanges(QAbstractSocket::SocketState s)
 	switch( s )
 	{
 	case QAbstractSocket::UnconnectedState:
+		setLoginState(NoLoged);
 		emit comStateChanged(Unconnected);
 		return;
 	case QAbstractSocket::HostLookupState:
