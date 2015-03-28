@@ -404,7 +404,6 @@ void Comm::doLogin()
 
 		emit loginRequest(&m_Username, &m_Password);
 
-		// TODO: Better use the public functions sendSentence();
 		sendSentence("/login", false,
 							 QStringList() << QString("=name=%1").arg(m_Username)
 										<< QString("=response=00%1").arg(QMD5::encode(m_Password, incomingSentence.attributes().attribute("ret"))));
