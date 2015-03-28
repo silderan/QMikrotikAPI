@@ -44,7 +44,7 @@ bool splitWord(const QString &word, QString &name, QString &value, int from)
 	int p = word.indexOf('=', from);
 	if( p != -1 )
 	{
-		name = word.mid(from, p-1);
+		name = word.mid(from, p-from);
 		value = word.right(word.count()-p-1);
 		return true;
 	}
@@ -188,7 +188,7 @@ QString QQuery::toWord() const
  */
 QQuery &QQuery::fromWord(const QString &word)
 {
-	if( word.count() < 3 )
+	if( word.count() < 2 )
 		return *this;
 
 	int from = 0;

@@ -159,6 +159,8 @@ void MainWindow::on_pbEnviar_clicked()
 	if( ui->leCommand->text().isEmpty() )
 		return;
 	ROS::QSentence s(ui->leCommand->text(), QString(),
-					 ui->leAttrib->text().split(','));
+					 ui->leAttrib->text().split(','),
+					 ui->leAPI->text().split(','),
+					 ui->leQueries->text().split(','));
 	addLogText(QString("Sentencia enviada. Tag=%1").arg(mktAPI.sendSentence(s)));
 }

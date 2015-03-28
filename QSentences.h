@@ -61,9 +61,11 @@ struct QQuery
 	QQuery()
 		: type(HasProp)
 	{ }
-	QQuery(const QString &propName)
-		: type(HasProp), name(propName)
-	{ }
+	QQuery(const QString &word)
+		: type(HasProp)
+	{
+		fromWord(word);
+	}
 	QQuery(const QString &propName, const QString &propVal, Type t = EqualProp)
 		: type(t), name(propName), value(propVal)
 	{ }

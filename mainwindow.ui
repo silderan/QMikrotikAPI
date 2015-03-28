@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>883</width>
-    <height>625</height>
+    <width>1016</width>
+    <height>619</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -141,27 +141,7 @@
        <string>Sentence</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="4" column="1">
-        <widget class="QLineEdit" name="lineEdit_2"/>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>At. API</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>Queries</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="lineEdit"/>
-       </item>
-       <item row="5" column="0" colspan="2">
+       <item row="6" column="0" colspan="2">
         <widget class="QPushButton" name="pbEnviar">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -177,6 +157,9 @@
          </property>
         </widget>
        </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="leAttrib"/>
+       </item>
        <item row="0" column="0">
         <widget class="QLabel" name="label_5">
          <property name="text">
@@ -184,13 +167,20 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLineEdit" name="leAttrib"/>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="leCommand">
+       <item row="1" column="0" colspan="2">
+        <widget class="QLabel" name="label_9">
          <property name="text">
-          <string>/interface/getall</string>
+          <string>Los atributos, atributos API y los Queries sepárapos por comas cuando quieras enviar más de uno.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="leAPI"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>At. API</string>
          </property>
         </widget>
        </item>
@@ -201,10 +191,31 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0" colspan="2">
-        <widget class="QLabel" name="label_9">
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="leQueries">
          <property name="text">
-          <string>Los atributos, atributos API y los Queries sepárapos por comas cuando quieras enviar más de uno.</string>
+          <string>type=ether,#|</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="leCommand">
+         <property name="text">
+          <string>/interface/getall</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Queries</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>Si se envían queries, no se olvide en añadir el cálculo. Por ejemplo: #|</string>
          </property>
         </widget>
        </item>
@@ -224,8 +235,8 @@
   <tabstop>lwResponses</tabstop>
   <tabstop>leCommand</tabstop>
   <tabstop>leAttrib</tabstop>
-  <tabstop>lineEdit</tabstop>
-  <tabstop>lineEdit_2</tabstop>
+  <tabstop>leAPI</tabstop>
+  <tabstop>leQueries</tabstop>
   <tabstop>pbEnviar</tabstop>
  </tabstops>
  <resources/>
