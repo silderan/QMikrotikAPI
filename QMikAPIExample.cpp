@@ -18,13 +18,13 @@
 	see <http://www.gnu.org/licenses/>.
  */
 
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
+#include "QMikAPIExample.h"
+#include "ui_QMikAPIExample.h"
 
 QConfigData gGlobalConfig;
 
-MainWindow::MainWindow(QWidget *parent) :
-	QMainWindow(parent), ui(new Ui::MainWindow),
+QMikAPIExample::QMikAPIExample(QWidget *parent) :
+	QMainWindow(parent), ui(new Ui::QMikAPIExample),
 	mktAPI(this)
 {
     ui->setupUi(this);
@@ -49,7 +49,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect( &mktAPI, SIGNAL(comReceive(ROS::QSentence&)), this, SLOT(onReceive(ROS::QSentence&)) );
 }
 
-MainWindow::~MainWindow()
+QMikAPIExample::~QMikAPIExample()
 {
 	mktAPI.closeCom();
 	// Guardamos los datos del diálogo.
@@ -62,7 +62,7 @@ MainWindow::~MainWindow()
 	ui = 0;
 }
 
-void MainWindow::addLogText(const QString &txt)
+void QMikAPIExample::addLogText(const QString &txt)
 {
 	if( ui )
 	{
@@ -71,7 +71,7 @@ void MainWindow::addLogText(const QString &txt)
 	}
 }
 
-void MainWindow::on_pbConnect_clicked()
+void QMikAPIExample::on_pbConnect_clicked()
 {
 	if( mktAPI.isClosing() )
 		mktAPI.closeCom(true);
@@ -86,7 +86,7 @@ void MainWindow::on_pbConnect_clicked()
 }
 
 
-void MainWindow::onStateChanged(ROS::Comm::CommState s)
+void QMikAPIExample::onStateChanged(ROS::Comm::CommState s)
 {
 	ui->groupBox->setEnabled(false);
 	switch( s )
@@ -114,7 +114,7 @@ void MainWindow::onStateChanged(ROS::Comm::CommState s)
 	}
 }
 
-void MainWindow::onLoginChanged(ROS::Comm::LoginState s)
+void QMikAPIExample::onLoginChanged(ROS::Comm::LoginState s)
 {
 	switch( s )
 	{
@@ -138,23 +138,23 @@ void MainWindow::onLoginChanged(ROS::Comm::LoginState s)
 	}
 }
 
-void MainWindow::onLoginRequest(QString *user, QString *pass)
+void QMikAPIExample::onLoginRequest(QString *user, QString *pass)
 {
 	*user = ui->leUser->text();
 	*pass = ui->lePass->text();
 }
 
-void MainWindow::onComError(ROS::Comm::CommError, QAbstractSocket::SocketError)
+void QMikAPIExample::onComError(ROS::Comm::CommError, QAbstractSocket::SocketError)
 {
 	addLogText(mktAPI.errorString());
 }
 
-void MainWindow::onReceive(ROS::QSentence &s)
+void QMikAPIExample::onReceive(ROS::QSentence &s)
 {
 	addLogText(s.toString());
 }
 
-void MainWindow::on_pbEnviar_clicked()
+void QMikAPIExample::on_pbEnviar_clicked()
 {
 	if( ui->leCommand->text().isEmpty() )
 		return;

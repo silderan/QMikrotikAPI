@@ -13,21 +13,24 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
     QSentences.cpp \
     QMD5.cpp \
     QIniFile.cpp \
-    Comm.cpp
+    Comm.cpp \
+    QMikAPIExample.cpp
 
-HEADERS  += mainwindow.h \
+HEADERS  += \
     QSentences.h \
     QMD5.h \
     QIniFile.h \
-    Comm.h
+    Comm.h \
+    QMikAPIExample.h
 
-FORMS    += mainwindow.ui
+FORMS    += \
+    QMikAPIExample.ui
 
 DISTFILES += \
     README.md \
     COPYING.LESSER \
-    COPYING
+    COPYING \
+    README.txt

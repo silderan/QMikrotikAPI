@@ -18,7 +18,7 @@
 	see <http://www.gnu.org/licenses/>.
  */
 
-#include "mainwindow.h"
+#include "QMikAPIExample.h"
 #include <QApplication>
 #include <QCryptographicHash>
 
@@ -49,7 +49,7 @@ void Tokenize(const string &str, vector<string> &tokens, const string &delimiter
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
-    MainWindow w;
+    QMikAPIExample w;
 //	QByteArray ori = "65660F0F0F0F0F0F0F0F0F0F0F0F0F0F";
 //	QByteArray ch1 = QMD5::ToBinary(QString::fromLatin1(ori)).toLatin1();
 //	QByteArray ch2 = QMD5::hexToChars(ori);

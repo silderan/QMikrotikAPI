@@ -28,7 +28,7 @@
 
 namespace Ui
 {
-	class MainWindow;
+	class QMikAPIExample;
 }
 
 class QConfigData
@@ -71,16 +71,16 @@ public:
 
 extern QConfigData gGlobalConfig;
 
-class MainWindow : public QMainWindow
+class QMikAPIExample : public QMainWindow
 {
     Q_OBJECT
-	Ui::MainWindow *ui;
+	Ui::QMikAPIExample *ui;
 	ROS::Comm mktAPI;
 
 	void addLogText(const QString &txt);
 public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+	explicit QMikAPIExample(QWidget *parent = 0);
+	~QMikAPIExample();
 
 private slots:
 	void on_pbConnect_clicked();
