@@ -145,6 +145,8 @@ public:
 	QString errorString();
 	QString sendSentence(const ROS::QSentence &sent, bool sendTag = true);
 	QString sendSentence(const QString &cmd, bool sendTag = true, const QStringList &attrib = QStringList());
+	QString sendCancel(const QString &tag);
+	QString sendSentence(const QString &cmd, const QString &tag, const QStringList &attrib = QStringList());
 
 public slots:
 	void connectTo(const QString &addr, quint16 port);

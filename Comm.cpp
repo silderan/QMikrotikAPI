@@ -153,6 +153,16 @@ QString Comm::sendSentence(const QString &cmd, bool sendTag, const QStringList &
 	return sendSentence( QSentence(cmd, QString(), attrib), sendTag );
 }
 
+QString Comm::sendCancel(const QString &tag)
+{
+	return sendSentence( QSentence("/cancel", tag) );
+}
+
+QString Comm::sendSentence(const QString &cmd, const QString &tag, const QStringList &attrib)
+{
+	return sendSentence( QSentence(cmd, tag, attrib) );
+}
+
 /**
  * @brief Comm::sendWord
  * Sends a word to router.
@@ -322,7 +332,7 @@ void Comm::receiveSentence()
 			}
 			else
 			{
-				incomingSentence.addWord(incomingWord);
+				incomingSentence.addWord(QString::fromLatin1(incomingWord));
 				resetWord();
 			}
 		}
@@ -398,13 +408,13 @@ void Comm::doLogin()
 			closeCom();
 			break;
 		}
-		if( !incomingSentence.attributes().attribute("ret").count() )
+		if( !incomingSentence.attribute("ret").count() )
 		{
 			setComError( LogingSentenceNoRet );
 			closeCom();
 			break;
 		}
-		if( incomingSentence.attributes().attribute("ret").count() != 32 )
+		if( incomingSentence.attribute("ret").count() != 32 )
 		{
 			setComError( LogingSentenceRet32 );
 			closeCom();
@@ -415,7 +425,7 @@ void Comm::doLogin()
 
 		sendSentence("/login", false,
 							 QStringList() << QString("=name=%1").arg(m_Username)
-										<< QString("=response=00%1").arg(QMD5::encode(m_Password, incomingSentence.attributes().attribute("ret"))));
+										<< QString("=response=00%1").arg(QMD5::encode(m_Password, incomingSentence.attribute("ret"))));
 		resetSentence();
 		setLoginState(UserPassSended);
 		break;

@@ -144,9 +144,11 @@ public:
 
 	inline const QBasicAttrib &attributes() const { return m_Attributes; }
 	inline QBasicAttrib &attributes() { return m_Attributes; }
+	inline QString attribute(const QString &name) const { return m_Attributes.attribute(name); }
 
 	inline const QBasicAttrib &APIattributes() const { return m_APIAttributes; }
 	inline QBasicAttrib &APIattributes() { return m_APIAttributes; }
+	inline QString APIAttribute(const QString &name) const { return m_APIAttributes.attribute(name); }
 
 	inline void setTag(const QString &tagname) { m_tag = tagname; }
 	inline const QString &tag() const { return m_tag; }
