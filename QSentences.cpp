@@ -352,7 +352,10 @@ void QSentence::addWord(const QString &word)
 		switch(word[0].toLatin1())
 		{
 		case '=':
-			attributes().addWord(word);
+			if( word.startsWith("=.id") )
+				setID(word.right(word.count()-5));
+			else
+				attributes().addWord(word);
 			break;
 		case '.':
 			if( word.startsWith(".tag") )

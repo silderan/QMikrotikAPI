@@ -121,6 +121,8 @@ QString Comm::sendSentence(const QSentence &sent, bool sendTag)
 	QString word;
 
 	sendWord(sent.command());
+	if( !sent.getID().isEmpty() )
+		sendWord(QString("=.id=%1").arg(sent.getID()));
 	foreach( word, sent.attributes().toWords() )
 		sendWord(word);
 	foreach( word, sent.APIattributes().toWords() )

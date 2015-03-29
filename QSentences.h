@@ -108,6 +108,7 @@ private:
 	Result resultType;		// Sentence return type.
 	QString m_cmd;				// Sentence command.
 	QString m_tag;				// Sentence tag (if any)
+	QString m_id;				// ID.
 	QBasicAttrib m_Attributes;	// Attributes mapping.
 	QBasicAttrib m_APIAttributes;//API Attributes mapping.
 	QQueries m_Queries;			// Queries list.
@@ -145,13 +146,20 @@ public:
 	inline const QBasicAttrib &attributes() const { return m_Attributes; }
 	inline QBasicAttrib &attributes() { return m_Attributes; }
 	inline QString attribute(const QString &name) const { return m_Attributes.attribute(name); }
+	inline void addAttribute(const QString &name, const QString &value) { m_Attributes.addWord(name, value); }
+	inline void addAttribute(const QString &word) { m_Attributes.addWord(word); }
 
 	inline const QBasicAttrib &APIattributes() const { return m_APIAttributes; }
 	inline QBasicAttrib &APIattributes() { return m_APIAttributes; }
 	inline QString APIAttribute(const QString &name) const { return m_APIAttributes.attribute(name); }
+	inline void addAPIAttribute(const QString &name, const QString &value) { m_APIAttributes.addWord(name, value); }
+	inline void addAPIAttribute(const QString &word) { m_APIAttributes.addWord(word); }
 
 	inline void setTag(const QString &tagname) { m_tag = tagname; }
 	inline const QString &tag() const { return m_tag; }
+
+	inline void setID(const QString &id) { m_id = id; }
+	inline const QString &getID() const { return m_id; }
 
 	inline QQueries &queries() { return m_Queries; }
 	inline const QQueries &queries() const { return m_Queries; }
