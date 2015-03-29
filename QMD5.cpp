@@ -86,7 +86,7 @@ QString QMD5::charsToHex(const QByteArray &s)
 		rtn[(i<<1)+1] = charToHex(s[i] & 0xF);
 		rtn[i<<1] = charToHex((s[i]>>4) & 0xF);
 	}
-	rtn[33] = '\0';
+	rtn[32] = '\0';
 
 	return QString::fromLatin1(rtn);
 }
