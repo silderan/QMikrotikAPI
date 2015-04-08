@@ -94,6 +94,8 @@ QString QBasicAttrib::toWord(const QString &name) const
 	QString val = value(name);
 	if( !val.isEmpty() )
 		return QString("%1%2=%3").arg(firstCh).arg(name,val);
+	if( name.startsWith('!') )
+		return QString("%1%2").arg(firstCh).arg(name);
 	return QString();
 }
 
