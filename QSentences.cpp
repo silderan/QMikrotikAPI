@@ -127,7 +127,8 @@ void QBasicAttrib::addWord(const QString &name, const QString &value)
 void QBasicAttrib::addWords(const QStringList &words)
 {
 	foreach( QString word, words )
-		addWord(word);
+		if( !word.isEmpty() )
+			addWord(word);
 }
 
 /**
@@ -289,8 +290,9 @@ QStringList QQueries::toWords() const
  */
 void QQueries::addQueries(const QStringList &queries)
 {
-	foreach( QString query, queries)
-		addQuery(query);
+	foreach( QString query, queries )
+		if( !query.isEmpty() )
+			addQuery(query);
 }
 
 /**

@@ -163,6 +163,8 @@ public:
 
 	inline QQueries &queries() { return m_Queries; }
 	inline const QQueries &queries() const { return m_Queries; }
+	inline void addQuery(const QString &name, const QString &value, QQuery::Type t) { m_Queries.addQuery(name, value, t); }
+	inline void addQueries(const QStringList &queries) { m_Queries.addQueries(queries); }
 
 	void addWord(const QString &word);
 };
