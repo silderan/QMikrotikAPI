@@ -84,7 +84,6 @@ public:
 
 private slots:
 	void on_pbConnect_clicked();
-	void onLoginRequest(QString *user, QString *pass);
 	void onComError(ROS::Comm::CommError, QAbstractSocket::SocketError);
 	void onReceive(ROS::QSentence &s);
 	void onStateChanged(ROS::Comm::CommState s);

@@ -55,6 +55,9 @@ public:
 	enum CommError
 	{
 		NoCommError,
+		NoRemoteHostProvided,
+		NoRemotePortProvided,
+		NoUserNameProvided,
 		SocketError,
 		LoginRefused,
 		LogingSentenceEmpty,
@@ -104,7 +107,6 @@ private slots:
 
 signals:
 	void comError(ROS::Comm::CommError ce, QAbstractSocket::SocketError se);
-    void loginRequest(QString *user, QString *pass);
 	void comReceive(ROS::QSentence &s);
 	void comStateChanged(ROS::Comm::CommState s);
 	void loginStateChanged(ROS::Comm::LoginState s);
@@ -149,7 +151,9 @@ public:
 	QString sendSentence(const QString &cmd, const QString &tag, const QStringList &attrib = QStringList());
 
 public slots:
-	void connectTo(const QString &addr, quint16 port);
+	void setRemoteHost(const QString &addr, quint16 port) { m_addr = addr; m_port = port; }
+	void setUserNamePass(const QString &uname, const QString &upass) { m_Username = uname; m_Password = upass; }
+	void connectToROS();
 	void closeCom(bool force = false);
 };
 }

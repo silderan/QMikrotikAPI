@@ -39,7 +39,6 @@ QMikAPIExample::QMikAPIExample(QWidget *parent) :
 
 	connect( &mktAPI, SIGNAL(comError(ROS::Comm::CommError,QAbstractSocket::SocketError)),
 			 this, SLOT(onComError(ROS::Comm::CommError,QAbstractSocket::SocketError)) );
-	connect( &mktAPI, SIGNAL(loginRequest(QString*,QString*)), this, SLOT(onLoginRequest(QString*,QString*)) );
 
 	connect( &mktAPI, SIGNAL(comStateChanged(ROS::Comm::CommState)),
 			 this, SLOT(onStateChanged(ROS::Comm::CommState)) );
@@ -82,7 +81,15 @@ void QMikAPIExample::on_pbConnect_clicked()
 	if( mktAPI.isConnected() || mktAPI.isConnecting() )
 		mktAPI.closeCom();
 	else
-		mktAPI.connectTo(ui->leIP->text(), (unsigned short)ui->sbPort->value());
+	{
+		gGlobalConfig.setUserName(ui->leUser->text());
+		gGlobalConfig.setUserPass(ui->lePass->text());
+		gGlobalConfig.setHost(ui->leIP->text());
+		gGlobalConfig.setPort(ui->sbPort->value());
+		mktAPI.setRemoteHost(gGlobalConfig.getHost(), gGlobalConfig.getPort());
+		mktAPI.setUserNamePass(gGlobalConfig.getUserName(), gGlobalConfig.getUserPass());
+		mktAPI.connectToROS();
+	}
 }
 
 
@@ -136,12 +143,6 @@ void QMikAPIExample::onLoginChanged(ROS::Comm::LoginState s)
 		ui->groupBox->setEnabled(true);
 		break;
 	}
-}
-
-void QMikAPIExample::onLoginRequest(QString *user, QString *pass)
-{
-	*user = ui->leUser->text();
-	*pass = ui->lePass->text();
 }
 
 void QMikAPIExample::onComError(ROS::Comm::CommError, QAbstractSocket::SocketError)

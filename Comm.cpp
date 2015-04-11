@@ -56,6 +56,12 @@ QString Comm::errorString()
 		return tr("No error");
 	case SocketError:
 		return tr("A socket error.");
+	case NoRemoteHostProvided:
+		return tr("No remote host provided.");
+	case NoRemotePortProvided:
+		return tr("No remote port provided.");
+	case NoUserNameProvided:
+		return tr("No login user name provided.");
 	case LoginRefused:
 		return tr("Login refused from remote router");
 	case LogingSentenceEmpty:
@@ -347,12 +353,23 @@ void Comm::receiveSentence()
  * @param addr The addres where the ROS is. Can be a URL.
  * @param port The port where the ROS API is listening.
  */
-void ROS::Comm::connectTo(const QString &addr, quint16 port)
+void ROS::Comm::connectToROS()
 {
 	if( m_sock.state() == QAbstractSocket::UnconnectedState )
 	{
-		setComError( NoCommError );
-		m_sock.connectToHost(m_addr = addr, m_port = port);
+		if( m_addr.isEmpty() )
+			setComError( NoRemoteHostProvided );
+		else
+		if( m_port == 0 )
+			setComError( NoRemotePortProvided );
+		else
+		if( m_Username.isEmpty() )
+			setComError( NoUserNameProvided );
+		else
+		{
+			setComError( NoCommError );
+			m_sock.connectToHost(m_addr, m_port);
+		}
 	}
 }
 
@@ -421,8 +438,6 @@ void Comm::doLogin()
 			closeCom();
 			break;
 		}
-
-		emit loginRequest(&m_Username, &m_Password);
 
 		sendSentence("/login", false,
 							 QStringList() << QString("=name=%1").arg(m_Username)
