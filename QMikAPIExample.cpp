@@ -66,7 +66,7 @@ void QMikAPIExample::addLogText(const QString &txt)
 	if( ui )
 	{
 		ui->lwResponses->addItem(txt);
-		ui->lwResponses->scrollToBottom();
+//		ui->lwResponses->scrollToBottom();
 	}
 }
 
