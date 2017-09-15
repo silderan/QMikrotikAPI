@@ -27,7 +27,7 @@ Then, you need to include network on your .pro file. Just add
 
 QT       += core gui network
 
-To use this API is as easy as using this self-explained public
+To use this API is as easy as using the self-explained public
 funtions and signals you can see in Comm.h.
 You shall take a look to QSentence.h to see how to use this class
 to more detailed control for sending sentences to ROS.
