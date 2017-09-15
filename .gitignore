@@ -1,6 +1,15 @@
 # Local user configurations
 *.pro.user*
 
+# Temporary object files
+*.o
+
+# Auto backup files
+*.bak
+
+# Qt Bulding folder
+Debug/
+Release/
 
 # Windows image file caches
 Thumbs.db
