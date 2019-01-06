@@ -116,39 +116,67 @@ public:
 	~Comm();
 
 	/**
+	 * @brief loginState
+	 * Returns the login state of the API. It's up to the user/pass autentication.
+	 * Takes care that this could be useless and not acurate if comm state is not connectet
+	 * For a Loged state acurate check, use isLoged instead.
+	 * @return A LoginState value representing the state of login procedure
+	 */
+	inline LoginState loginState() const					{ return m_loginState;	}
+	inline QAbstractSocket::SocketState commState() const{ return m_sock.state();	}
+
+	inline bool checkComState( QAbstractSocket::SocketState comState ) const	{ return commState() == comState;	}
+	inline bool checkLoginState( LoginState loginState ) const					{ return this->loginState() == loginState;	}
+
+	/**
 	 * @brief isConnected
 	 * This function just tells if socket is connectet to ROS, but
 	 * doesn't takes care if logon was done.
 	 * @return true/false if socket is in "ConnectetState" or not.
 	 */
-	inline bool isConnected() const { return m_sock.state() == QAbstractSocket::ConnectedState;	}
-	/**
-	 * @brief isLoged
-	 * This function checks if a succefull login was done.
-	 * Internally, checks isConnected. Si, will return false if is not connected.
-	 * @return true/false if we are correctly loged into ROS.
-	 */
-	inline bool isLoged() const { return isConnected() && (m_loginState == LogedIn); }
+	inline bool isConnected() const { return checkComState(QAbstractSocket::ConnectedState);	}
 	/**
 	 * @brief isClosing
 	 * Checks if socket is en "closing" state.
 	 * This state happens when a "gracefull" closeCom(false) function is called.
 	 * @return true if socket is closing.
 	 */
-	inline bool isClosing() const { return m_sock.state() == QAbstractSocket::ClosingState; }
+	inline bool isClosing() const { return checkComState(QAbstractSocket::ClosingState); }
 	/**
 	 * @brief isConnecting
 	 * Checks if socket is in "connecting" state.
 	 * This state happens at handshake between this client and server.
 	 * @return
 	 */
-	inline bool isConnecting() const { return m_sock.state() == QAbstractSocket::ConnectingState; }
+	inline bool isConnecting() const { return checkComState(QAbstractSocket::ConnectingState); }
+	/**
+	 * @brief isDisconnecting
+	 * Check if socket is disconnecting.
+	 * @return
+	 */
+	inline bool isDisconnecting() const { return checkComState(QAbstractSocket::ClosingState); }
+	/**
+	 * @brief isDisconnected
+	 * Check if socket is not connected or connecting or disconnecting.
+	 * @return
+	 */
+	inline bool isDisconnected() const { return !isConnected() && !isConnecting() && !isDisconnecting(); }
+	/**
+	 * @brief isLoged
+	 * This function checks if a succefull login was done.
+	 * Internally, checks isConnected. Si, will return false if is not connected.
+	 * @return true/false if we are correctly loged into ROS.
+	 */
+	inline bool isLoged() const { return isConnected() && checkLoginState(LogedIn); }
 
-	QString errorString();
+	QString errorString() const;
 	QString sendSentence(const ROS::QSentence &sent, bool sendTag = true);
 	QString sendSentence(const QString &cmd, bool sendTag = true, const QStringList &attrib = QStringList());
 	QString sendCancel(const QString &tag);
 	QString sendSentence(const QString &cmd, const QString &tag, const QStringList &attrib = QStringList());
+
+	inline const QString &hostAddr() const	{ return m_addr;	}
+	inline quint16 hostPort() const			{ return m_port;	}
 
 public slots:
 	void setRemoteHost(const QString &addr, quint16 port) { m_addr = addr; m_port = port; }

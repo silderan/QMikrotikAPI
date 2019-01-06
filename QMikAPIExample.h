@@ -40,9 +40,11 @@ public:
 	void defaults()
 	{
 		iniData["remoteHost"] = "192.168.1.1";
-		iniData["remotePort"] = QString("%1").arg(8728);
+		iniData["remotePort"] = QString::number( 8728 );
 		iniData["username"] = "admin";
 		iniData["userpass"] = "";
+		iniData["last-command"] = "/user/getall";
+		iniData["last-query"] = "#|";
 	}
 
 	QConfigData() : configFName("config.ini")
@@ -67,6 +69,24 @@ public:
 
 	void setUserPass(const QString &upass) { iniData["userpass"] = upass;	}
 	QString getUserPass() const { return iniData["userpass"]; }
+
+	void setLastCommand(const QString &cmd) { iniData["last-command"] = cmd;	}
+	QString getLastCommand() const { return iniData["last-command"]; }
+
+	void setLastQuery(const QString &cmd) { iniData["last-query"] = cmd;	}
+	QString getLastQuery() const { return iniData["last-query"]; }
+
+	void setLastAttributes(const QString &s) { iniData["last-attributes"] = s;	}
+	QString getLastAttributes() const { return iniData["last-attributes"]; }
+
+	void setLastAPIAttributes(const QString &s) { iniData["last-api-attributes"] = s;	}
+	QString getLastAPIAttributes() const { return iniData["last-api-attributes"]; }
+
+	void setLastTag(const QString &s) { iniData["last-tag"] = s;	}
+	QString getLastTag() const { return iniData["last-tag"]; }
+
+	void setAutoScrollToButton(bool b)	{ iniData["auto-scroll"] = b ? "true" : "false";	}
+	bool getAutoScrollToButton()const	{ return iniData["auto-scroll"] == "true";	}
 };
 
 extern QConfigData gGlobalConfig;

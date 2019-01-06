@@ -35,6 +35,12 @@ QMikAPIExample::QMikAPIExample(QWidget *parent) :
 	ui->sbPort->setValue(gGlobalConfig.getPort());
 	ui->leUser->setText(gGlobalConfig.getUserName());
 	ui->lePass->setText(gGlobalConfig.getUserPass());
+	ui->leCommand->setText(gGlobalConfig.getLastCommand());
+	ui->tagLineEdit->setText( gGlobalConfig.getLastTag() );
+	ui->leAttrib->setText(gGlobalConfig.getLastAttributes());
+	ui->leAPI->setText(gGlobalConfig.getLastAPIAttributes());
+	ui->leQueries->setText(gGlobalConfig.getLastQuery());
+	ui->autoScrollCheckBox->setChecked( gGlobalConfig.getAutoScrollToButton() );
 	ui->groupBox->setEnabled(false);
 
 	connect( &mktAPI, SIGNAL(comError(ROS::Comm::CommError,QAbstractSocket::SocketError)),
@@ -56,6 +62,12 @@ QMikAPIExample::~QMikAPIExample()
 	gGlobalConfig.setPort(ui->sbPort->value());
 	gGlobalConfig.setUserName(ui->leUser->text());
 	gGlobalConfig.setUserPass(ui->lePass->text());
+	gGlobalConfig.setLastCommand(ui->leCommand->text());
+	gGlobalConfig.setLastTag( ui->tagLineEdit->text() );
+	gGlobalConfig.setLastAttributes(ui->leAttrib->text());
+	gGlobalConfig.setLastAPIAttributes(ui->leAPI->text());
+	gGlobalConfig.setLastQuery(ui->leQueries->text());
+	gGlobalConfig.setAutoScrollToButton( ui->autoScrollCheckBox->isChecked() );
 	gGlobalConfig.save();
     delete ui;
 	ui = 0;
@@ -66,7 +78,8 @@ void QMikAPIExample::addLogText(const QString &txt)
 	if( ui )
 	{
 		ui->lwResponses->addItem(txt);
-//		ui->lwResponses->scrollToBottom();
+		if( ui->autoScrollCheckBox->isChecked() )
+			ui->lwResponses->scrollToBottom();
 	}
 }
 
@@ -163,5 +176,7 @@ void QMikAPIExample::on_pbEnviar_clicked()
 					 ui->leAttrib->text().split(','),
 					 ui->leAPI->text().split(','),
 					 ui->leQueries->text().split(','));
-	addLogText(QString("Sentencia enviada. Tag=%1").arg(mktAPI.sendSentence(s)));
+	s.setTag( ui->tagLineEdit->text() );
+	s.setResultType(ROS::QSentence::None);
+	addLogText(QString("Sentencia enviada:%1 TAG=%2").arg(s.toString(), mktAPI.sendSentence(s)));
 }

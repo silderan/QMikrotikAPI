@@ -116,6 +116,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="autoScrollCheckBox">
+          <property name="text">
+           <string>mover barras auto.</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -141,6 +148,20 @@
        <string>Sentence</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="2">
+        <widget class="QLabel" name="label_11">
+         <property name="text">
+          <string>Etiqueta</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>Los atributos, atributos API y los Queries sepárapos por comas cuando quieras enviar más de uno.</string>
+         </property>
+        </widget>
+       </item>
        <item row="6" column="0" colspan="2">
         <widget class="QPushButton" name="pbEnviar">
          <property name="sizePolicy">
@@ -154,51 +175,6 @@
          </property>
          <property name="default">
           <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLineEdit" name="leAttrib">
-         <property name="text">
-          <string>interface=bridgeHotSpot,src-address=10.4.0.0/16</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>Comando</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="2">
-        <widget class="QLabel" name="label_9">
-         <property name="text">
-          <string>Los atributos, atributos API y los Queries sepárapos por comas cuando quieras enviar más de uno.</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="leAPI"/>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>At. API</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_6">
-         <property name="text">
-          <string>Atributos</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLineEdit" name="leQueries">
-         <property name="text">
-          <string>type=ether,#|</string>
          </property>
         </widget>
        </item>
@@ -216,10 +192,58 @@
          </property>
         </widget>
        </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>At. API</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>Atributos</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>Comando</string>
+         </property>
+        </widget>
+       </item>
        <item row="4" column="1">
         <widget class="QLabel" name="label_10">
          <property name="text">
           <string>Si se envían queries, no se olvide en añadir el cálculo. Por ejemplo: #|</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QLineEdit" name="tagLineEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1" colspan="3">
+        <widget class="QLineEdit" name="leAttrib">
+         <property name="text">
+          <string>interface=bridgeHotSpot,src-address=10.4.0.0/16</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1" colspan="3">
+        <widget class="QLineEdit" name="leAPI"/>
+       </item>
+       <item row="5" column="1" colspan="3">
+        <widget class="QLineEdit" name="leQueries">
+         <property name="text">
+          <string>type=ether,#|</string>
          </property>
         </widget>
        </item>
@@ -236,12 +260,14 @@
   <tabstop>leIP</tabstop>
   <tabstop>sbPort</tabstop>
   <tabstop>pbConnect</tabstop>
-  <tabstop>lwResponses</tabstop>
+  <tabstop>autoScrollCheckBox</tabstop>
   <tabstop>leCommand</tabstop>
+  <tabstop>tagLineEdit</tabstop>
   <tabstop>leAttrib</tabstop>
   <tabstop>leAPI</tabstop>
   <tabstop>leQueries</tabstop>
   <tabstop>pbEnviar</tabstop>
+  <tabstop>lwResponses</tabstop>
  </tabstops>
  <resources/>
  <connections/>

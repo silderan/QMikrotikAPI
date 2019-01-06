@@ -46,7 +46,7 @@ Comm::~Comm()
  * or a custom one.
  * @return A human-readable string descriving the last error.
  */
-QString Comm::errorString()
+QString Comm::errorString() const
 {
 	switch( lastCommError )
 	{
@@ -234,7 +234,7 @@ int Comm::receiveWordCount()
 		}
 		if( (c & 0xF0) == 0xF0 )
 		{
-			setComError( ControlByteReceived );
+			setComError( WordReceivedTooLong );
 			closeCom(true);
 		}
 		if( (c & 0xE0) == 0xE0 )
@@ -483,46 +483,88 @@ void Comm::setLoginState(Comm::LoginState s)
  */
 void Comm::sendWordCount(int wordCount)
 {
-	char countBuff[4];
+	union
+	{
+		int value;
+		char buff[4];
+	}buffOut;
+	buffOut.value = wordCount;
 
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
-	countBuff[0] = ((char*)&wordCount)[0];
-	countBuff[1] = ((char*)&wordCount)[1];
-	countBuff[2] = ((char*)&wordCount)[2];
-	countBuff[3] = ((char*)&wordCount)[3];
-#else
-	countBuff[0] = ((char*)&wordCount)[3];
-	countBuff[1] = ((char*)&wordCount)[2];
-	countBuff[2] = ((char*)&wordCount)[1];
-	countBuff[3] = ((char*)&wordCount)[0];
-#endif
-
 	// write 1 byte
 	if( wordCount < 0x80 )
-		m_sock.write( countBuff, 1 );
+		m_sock.write( buffOut.buff, 1 );
 	else
 	if( wordCount < 0x4000 )		// write 2 bytes
 	{
-		countBuff[0] |= 0x80;
-		m_sock.write( countBuff, 2 );
+		buffOut.buff[1] |= 0x80;
+		m_sock.write( buffOut.buff+1, 1 );
+		m_sock.write( buffOut.buff, 1 );
 	}
 	else
 	if( wordCount < 0x200000)		// write 3 bytes
 	{
-		countBuff[0] |= 0xc0;
-		m_sock.write( countBuff, 3 );
+		buffOut.buff[2] |= 0xC0;
+		m_sock.write( buffOut.buff+2, 1 );
+		m_sock.write( buffOut.buff+1, 1 );
+		m_sock.write( buffOut.buff, 1 );
 	}
 	else
-	if( wordCount < 0x10000000 )	// write 4 bytes (untested)
+	if( wordCount < 0x10000000 )	// write 4 bytes
 	{
-		countBuff[0] |= 0xe0;
-		m_sock.write( countBuff, 4 );
+		buffOut.buff[3] |= 0xE0;
+		m_sock.write( buffOut.buff+3, 1 );
+		m_sock.write( buffOut.buff+2, 1 );
+		m_sock.write( buffOut.buff+1, 1 );
+		m_sock.write( buffOut.buff, 1 );
 	}
 	else
 	{
-		setComError( WordToSendTooLong );
-		closeCom(true);
+		char c = 0xF0;
+		m_sock.write( &c, 1 );
+		m_sock.write( buffOut.buff+3, 1 );
+		m_sock.write( buffOut.buff+2, 1 );
+		m_sock.write( buffOut.buff+1, 1 );
+		m_sock.write( buffOut.buff, 1 );
 	}
+#else
+	// write 1 byte
+	if( wordCount < 0x80 )
+		m_sock.write( buffOut.buff+3, 1 );
+	else
+	if( wordCount < 0x4000 )		// write 2 bytes
+	{
+		buffOut.buff[2] |= 0x80;
+		m_sock.write( buffOut.buff+2, 1 );
+		m_sock.write( buffOut.buff+3, 1 );
+	}
+	else
+	if( wordCount < 0x200000)		// write 3 bytes
+	{
+		buffOut.buff[1] |= 0xC0;
+		m_sock.write( buffOut.buff+1, 1 );
+		m_sock.write( buffOut.buff+2, 1 );
+		m_sock.write( buffOut.buff+3, 1 );
+	}
+	else
+	if( wordCount < 0x10000000 )	// write 4 bytes
+	{
+		buffOut.buff[0] |= 0xE0;
+		m_sock.write( buffOut.buff, 1 );
+		m_sock.write( buffOut.buff+1, 1 );
+		m_sock.write( buffOut.buff+2, 1 );
+		m_sock.write( buffOut.buff+3, 1 );
+	}
+	else
+	{
+		char c = 0xF0;
+		m_sock.write( &c, 1 );
+		m_sock.write( buffOut.buff, 1 );
+		m_sock.write( buffOut.buff+1, 1 );
+		m_sock.write( buffOut.buff+2, 1 );
+		m_sock.write( buffOut.buff+3, 1 );
+	}
+#endif
 }
 
 /**

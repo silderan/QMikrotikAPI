@@ -83,20 +83,13 @@ QStringList QBasicAttrib::toWords() const
  * attributes)
  * @param name The name of the word to create the ROS-word.
  * @return The ROS-word created. If name doesn't exist into
- * mapping, empty string is returned.
- * Be carefull because if you use what this function returns
- * without ensuring that "name" is into mapping, the empty
- * word returned shall invalidate all sentence as empty word
- * means "sentence end" to ROS.
+ * mapping, an emtpy attribute is created that has to meanings:
+ * 1: delete remote data (for attributes that needs data).
+ * 2: use attribute (for attributes that does'nt use data)
  */
 QString QBasicAttrib::toWord(const QString &name) const
 {
-	QString val = value(name);
-	if( !val.isEmpty() )
-		return QString("%1%2=%3").arg(firstCh).arg(name,val);
-	if( name.startsWith('!') )
-		return QString("%1%2").arg(firstCh).arg(name);
-	return QString();
+	return QString("%1%2=%3").arg(firstCh).arg(name, value(name));
 }
 
 /**
@@ -223,7 +216,7 @@ QQuery &QQuery::fromWord(const QString &word)
 		type = LessThanProp;
 		break;
 	case '#':
-		name = word.right(from);
+		name = word.mid(from);
 		type = Operation;
 		break;
 	}
@@ -311,7 +304,9 @@ QString QSentence::toString() const
 				queries().toWords().join(""));
 
 	if( m_tag.count() )
-		rtn.append(QString(".tag=%1").arg(m_tag));
+		rtn.append( QString(".tag=%1").arg(m_tag) );
+	if( m_id.count() )
+		rtn.append( QString(".id=%1").arg(m_id) ) ;
 	return rtn;
 }
 
