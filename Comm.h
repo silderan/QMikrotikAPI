@@ -84,6 +84,7 @@ private:
 	int wordCount;
 	char wordCountBuf[4];
 	CommError lastCommError;
+	bool mOldLogin;
 
 	void doLogin();
 	void tryLogin();
@@ -99,6 +100,8 @@ private:
 	void sendWord(const QString &strWord);
 
 	void setComError(CommError ce);
+
+	void sendUserPass();
 
 private slots:
 	void onSocketError(QAbstractSocket::SocketError err);
@@ -181,7 +184,7 @@ public:
 public slots:
 	void setRemoteHost(const QString &addr, quint16 port) { m_addr = addr; m_port = port; }
 	void setUserNamePass(const QString &uname, const QString &upass) { m_Username = uname; m_Password = upass; }
-	void connectToROS();
+	void connectToROS(bool oldLogin = false);
 	void closeCom(bool force = false);
 };
 }

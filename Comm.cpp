@@ -25,7 +25,11 @@ using namespace ROS;
 #include <QMessageBox>
 
 Comm::Comm(QObject *papi)
- : QObject(papi), m_loginState(NoLoged), incomingWordSize(-1), lastCommError(NoCommError)
+	: QObject(papi)
+	, m_loginState(NoLoged)
+	, incomingWordSize(-1)
+	, lastCommError(NoCommError)
+	, mOldLogin(false)
 {
 	connect( &m_sock, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(onSocketError(QAbstractSocket::SocketError)) );
 	connect( &m_sock, SIGNAL(readyRead()), this, SLOT(receiveSentence()) );
@@ -202,6 +206,23 @@ void Comm::setComError(Comm::CommError ce)
 		lastCommError = ce;
 }
 
+void Comm::sendUserPass()
+{
+	if( mOldLogin )
+	{
+		sendSentence("/login", false,
+					 QStringList() << QString("=name=%1").arg(m_Username)
+					 << QString("=response=00%1").arg(QMD5::encode(m_Password, incomingSentence.attribute("ret"))));
+	}
+	else
+	{
+		sendSentence("/login", false,
+					 QStringList() << QString("=name=%1").arg(m_Username) << QString("=password=%1").arg(m_Password) );
+	}
+	resetSentence();
+	setLoginState(UserPassSended);
+}
+
 /**
  * @brief Comm::receiveWordCount
  * Reads the word length from socket.
@@ -353,8 +374,10 @@ void Comm::receiveSentence()
  * @param addr The addres where the ROS is. Can be a URL.
  * @param port The port where the ROS API is listening.
  */
-void ROS::Comm::connectToROS()
+void ROS::Comm::connectToROS(bool oldLogin)
 {
+	mOldLogin = oldLogin;
+
 	if( m_sock.state() == QAbstractSocket::UnconnectedState )
 	{
 		if( m_addr.isEmpty() )
@@ -438,12 +461,7 @@ void Comm::doLogin()
 			closeCom();
 			break;
 		}
-
-		sendSentence("/login", false,
-							 QStringList() << QString("=name=%1").arg(m_Username)
-										<< QString("=response=00%1").arg(QMD5::encode(m_Password, incomingSentence.attribute("ret"))));
-		resetSentence();
-		setLoginState(UserPassSended);
+		sendUserPass();
 		break;
 	}
 	case UserPassSended:
@@ -602,8 +620,11 @@ void Comm::onSocketStateChanges(QAbstractSocket::SocketState s)
 		emit comStateChanged(Connected);
 		setLoginState(NoLoged);
 		resetSentence();
-		sendSentence( QSentence("/login"), false );
-		setLoginState(LoginRequested);
+		if( mOldLogin )
+			sendSentence( QSentence("/login"), false );
+		setLoginState( LoginRequested );
+		if( !mOldLogin )
+			sendUserPass();
 		return;
 	case QAbstractSocket::BoundState: // Este estado sólo se da en caso de ser un servidor.
 		return;
